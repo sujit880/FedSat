@@ -1,0 +1,9 @@
+*.csv  
+**/*.pyc
+**/*.json
+**/*.pdf
+**/*.ipynb
+**/*.pickle
+**/*.out
+DATA
+RESULTS
