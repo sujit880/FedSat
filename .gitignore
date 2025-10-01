@@ -5,5 +5,4 @@
 **/*.ipynb
 **/*.pickle
 **/*.out
-DATA
 RESULTS
