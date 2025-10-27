@@ -1,8 +1,9 @@
 *.csv  
 **/*.pyc
 **/*.json
-**/*.pdf
+RESULTS/*.pdf
 **/*.ipynb
 **/*.pickle
 **/*.out
+DATA
 RESULTS

@@ -103,8 +103,13 @@ class MOONClient(BaseClient):
                 # print(f'total_loss: {loss.item()}, cls_loss: {loss_sup.item()}, con_loss: {loss_con.item()}')
                 train_sample_size += len(labels)
 
-        # self.prev_model.load_state_dict(self.model.state_dict())
-        self.prev_model.load_state_dict(global_model.state_dict())
+        if self.prev_model_version == "v1":
+            self.prev_model.load_state_dict(self.model.state_dict()) #v1
+        elif self.prev_model_version == "v2":
+            self.prev_model.load_state_dict(global_model.state_dict()) #v2
+        else:
+            print("Invalid previous model version. No update performed.")
+            raise RuntimeError
         soln = self.get_model_params()
         comp = num_epochs * (train_sample_size // batch_size) * batch_size
         bytes_r = graph_size(self.model)

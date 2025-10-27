@@ -1,0 +1,99 @@
+% =============================== FedSat v1 Modular Draft ===============================
+\documentclass[journal]{IEEEtran}
+
+% Encoding and fonts
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% Math and symbols
+\usepackage{amsmath,amssymb,amsfonts}
+% The amsthm package provides theorem/proof environments
+\usepackage{amsthm}
+\usepackage{mathtools}
+
+% Figures and plots
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Algorithms and tables
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+
+% Citations and links
+\usepackage{cite}
+\usepackage[hidelinks]{hyperref}
+
+% Common macros
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\softmax}{\mathrm{softmax}}
+\DeclareMathOperator{\TopP}{Top\text{-}p}
+
+% Loss naming
+\newcommand{\lossname}{Confusion-Calibrated Cross-Entropy}
+\newcommand{\lossabbr}{C3E}
+\newcommand{\corelossname}{Cost-of-Misclassification Cross-Entropy}
+\newcommand{\corelossabbr}{CoM\text{-}CE}
+
+% Theorem-like environments
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}
+
+\title{FedSat: Confusion-Calibrated Cross-Entropy and Class-Specialized Aggregation for Robust Federated Learning under Non-IID Data}
+
+\author{Sujit~Chowdhury,~\IEEEmembership{Student Member,~IEEE}, and Raju~Halder,~\IEEEmembership{Senior Member,~IEEE}}
+
+\begin{document}
+
+\maketitle
+
+% Abstract and keywords
+% \input{sections/abstract}
+
+% Introduction
+\input{sections/introduction}
+
+
+% Related Work
+% \input{sections/related_work}
+
+% Methodology
+\input{sections/method}
+
+% Algorithm
+% \input{sections/algorithm}
+
+% Convergence Analysis
+% \input{sections/convergence}
+
+% Privacy Analysis
+% \input{sections/privacy}
+
+% % Experiments
+% \input{sections/experiments}
+
+% Results
+\input{sections/results_clean}
+
+% % Conclusion
+% \input{sections/conclusion}
+
+% % Appendix
+% \input{sections/appendix}
+
+% References
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+
+\end{document}

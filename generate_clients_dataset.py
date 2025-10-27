@@ -10,6 +10,7 @@ CLASSES = {
     "cifar100": 100,
     "emnist": 47,
     "fmnist": 10,
+    "femnist": 62,
     "har": 6,              # Common HAR datasets (e.g., UCI HAR) have 6 activity classes
     "areview": 2,     # Usually binary sentiment classification (positive/negative)
 }
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["mnist", "cifar", "cifar100", "domainnet", "fmnist", "har", "areview"],
+    choices=["mnist", "cifar", "cifar100", "domainnet", "fmnist", "emnist", "femnist", "har", "areview"],
         default="mnist",
     )
     parser.add_argument(

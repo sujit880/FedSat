@@ -9,7 +9,7 @@ FedProxMU = {
     "cifar100":0.001, 
     "tinyimagenet":0.001, 
     "emnist": 0.01, 
-    "fashionmnist":0.01,
+    "femnist":0.01,
     "fmnist":0.01,
 }
 

@@ -1,0 +1,220 @@
+%  V2
+
+\section{FedSat: Proposed Federated Learning Approach}
+
+
+
+FedSat introduces a unified framework that simultaneously mitigates three forms of data heterogeneity—label skewness, missing classes, and quantity skewness—through two synergistic components: (1) a \textbf{Confusion-Calibrated Cross-Entropy (C3E)} for client-side optimization, and (2) a \textbf{class-specialized weighted aggregation scheme} for server-side model fusion. Figure~\ref{fig:fedsat_framework} illustrates the overall architecture. Each client dynamically estimates its evolving confusion structure to refine the local objective, while the server leverages aggregated class-level difficulty signals to prioritize struggling classes during aggregation. This coupling ensures adaptive bias correction and faster convergence without increasing communication overhead.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.95\linewidth]{Fedsat_new_FrameWork.pdf}
+    \caption{FedSat framework. Clients maintain an EMA soft-confusion matrix to compute the Confusion-Calibrated Cross-Entropy (C3E) and emit a compact per-class ``struggler'' vector. The server aggregates struggler signals to select priority classes and performs class-specialized, weighted model aggregation to form the next global model.}
+    \label{fig:fedsat_framework}
+\end{figure}
+
+\subsection{Notation and preliminaries}
+We summarize symbols in Table~\ref{tab:notation}. All vectors are column vectors unless noted.
+
+\begin{table}[t]
+\caption{Notation used in this section.}
+\label{tab:notation}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.22\linewidth} >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Symbol} & \textbf{Description} \\
+\midrule
+$\mathcal{K}$ & Set of clients; $|\mathcal{K}|$ is its cardinality. At round $t$, the participating subset is $\mathcal{S}_t\subseteq\mathcal{K}$. \\
+$m$ & Number of classes; labels $y\in\{1,\dots,m\}$. \\
+$\mathcal{D}_k$ & Local dataset of client $k$: $\{(x_i^k,y_i^k)\}_{i=1}^{n_k}$ with $(x,y)\sim P_k$. \\
+$z\in\mathbb{R}^m$ & Logits for a single example; $Z\in\mathbb{R}^{B\times m}$ for a batch of size $B$. \\
+$Y\in\{0,1\}^{B\times m}$ & One-hot encoded labels for the batch. \\
+$\softmax(\cdot)$ & Row-wise softmax when applied to matrices. \\
+$\mathrm{Conf}\in\mathbb{R}^{m\times m}$; $\mathrm{Count}\in\mathbb{R}^m$ & EMA \emph{soft confusion} matrix; per-class counts. \\
+$\mu\in(0,1)$; $\varepsilon>0$ & EMA decay and a small constant for numerical stability. \\
+$\Delta,\,M\in[0,1]^{m\times m}$ & Cost and margin matrices with zero diagonals. \\
+$\lambda_{\mu},\lambda_{\nu}\ge 0$; $\beta_{\text{conf}}\ge 0$ & Mixture weights in C3E; margin strength. \\
+$S_{t,k}\in[0,1]^m$; $G_t$ & Client-$k$ \emph{struggler} vector at round $t$; global struggler. \\
+$\TopP(\cdot)$ & Top-$p$ operator: indices of the $p$ largest components. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Learning Objective}
+
+Let $\mathcal{K}$ denote the set of clients and $m$ the number of classes. Client $k$ has dataset $\mathcal{D}_k=\{(x_i^k,y_i^k)\}_{i=1}^{n_k}$ drawn from $P_k(x,y)$. FedSat seeks a global model $\Theta$ that minimizes the average local objective:
+\begin{align}
+\Theta^* 
+&= \operatorname*{arg\,min}_{\Theta} 
+\; \frac{1}{|\mathcal{K}|} \sum_{k\in\mathcal{K}} 
+\mathbb{E}_{(x,y)\sim \mathcal{D}_k}\big[\mathcal{L}_{\text{C3E}}(\theta_k; x,y)\big],
+\label{eq:global_obj}
+\end{align}
+where $\theta_k$ is the local model initialized from $\Theta$.
+
+\subsection{Client-Side Learning with Confusion-Calibrated Cross-Entropy (C3E)}
+
+Most cost-sensitive or class-balanced objectives in federated learning treat all classes symmetrically and rely on static weighting schemes. They fail to capture asymmetric, evolving confusion patterns caused by label imbalance and missing-class regimes.  
+FedSat addresses this gap by maintaining a soft, exponentially averaged confusion matrix that dynamically encodes pairwise misclassification tendencies between classes.
+
+\paragraph{Soft confusion tracking.}
+For a mini-batch with logits $Z\in\mathbb{R}^{B\times m}$ and one-hot labels $Y\in\{0,1\}^{B\times m}$, define the soft confusion increment
+\begin{align}
+U 
+&= Y^\top \, \softmax(Z). 
+\label{eq:soft_conf}
+\end{align}
+With decay $\mu\in(0,1)$ and $\varepsilon>0$, update EMA statistics as
+\begin{align}
+\mathrm{Conf} 
+&\leftarrow \mu\,\mathrm{Conf} + (1{-}\mu)\,(U{+}\varepsilon),
+\label{eq:ema_conf}
+\\
+\mathrm{Count}
+&\leftarrow \mu\,\mathrm{Count} + (1{-}\mu)\,(c{+}\varepsilon),
+\label{eq:ema_count}
+\end{align}
+where $c\in\mathbb{R}^m$ are per-class counts in the batch.
+
+\paragraph{Cost-augmented log-loss.}
+Construct a symmetric, zero-diagonal cost matrix by
+\begin{align}
+    ilde{C} 
+&= \tfrac{1}{2}\big(\mathrm{Conf} + \mathrm{Conf}^\top\big),
+\label{eq:csym}
+\\
+    ilde{A} 
+&= \tilde{C} - \operatorname{diag}\big(\operatorname{diag}(\tilde{C})\big),
+\label{eq:czero}
+\\
+\Delta 
+&= \frac{\tilde{A}}{\|\tilde{A}\|_\infty + \varepsilon} \in [0,1]^{m\times m}.
+\label{eq:delta_build}
+\end{align}
+Persistent confusion from class $y\to j$ increases $\Delta_{y,j}$, amplifying its penalty in the cost-augmented log-loss
+\begin{align}
+\mathcal{L}_{\text{log}}(z,y;\Delta)
+&= -z_y + \log \sum_{j=1}^{m} \exp\big(z_j + \Delta_{y,j}\big),
+\label{eq:cost_log}
+\end{align}
+where $z\in\mathbb{R}^m$ are logits for a single example.
+
+\paragraph{Margin-corrected cross-entropy.}
+To sharpen decision boundaries among confusable classes, derive a margin matrix from $\tilde{C}$:
+\begin{align}
+\hat{M} 
+&= \softmax\big(\tilde{C}\big)\; \text{(row-wise)}\,,
+\label{eq:mhat}
+\\
+\hat{M} 
+&\leftarrow \hat{M} - \operatorname{diag}\big(\operatorname{diag}(\hat{M})\big),
+\label{eq:mzero}
+\\
+M 
+&= \frac{\hat{M}}{\|\hat{M}\|_\infty + \varepsilon} \in [0,1]^{m\times m}.
+\label{eq:mbuild}
+\end{align}
+Calibrate logits as
+\begin{align}
+z' 
+&= z - \beta_{\text{conf}}\, M_{y,\cdot}\,, \quad \text{with $y$-th component left unchanged},
+\label{eq:zprime}
+\end{align}
+and apply standard cross-entropy on $z'$:
+\begin{align}
+\mathcal{L}_{\text{conf}}(z',y)
+&= -\log \frac{\exp(z'_y)}{\sum_{j=1}^{m} \exp(z'_j)}.
+\label{eq:margin_ce}
+\end{align}
+
+\paragraph{Unified C3E formulation.}
+Combining both components yields
+\begin{align}
+\mathcal{L}_{\text{C3E}}
+&= \lambda_{\mu}\, \mathcal{L}_{\text{log}} 
+    + \lambda_{\nu}\, \mathcal{L}_{\text{conf}},
+\label{eq:c3e_final}
+\end{align}
+where $\lambda_{\mu}$ and $\lambda_{\nu}$ control the relative emphasis on cost-based correction and margin refinement.
+
+\paragraph{Struggler signal.}
+Each client summarizes per-class residual difficulty as
+\begin{align}
+S_{t,k}^{(i)} 
+&= \frac{\sum_{j\ne i} \mathrm{Conf}_{i,j}}{\mathrm{Count}_i + \varepsilon}, 
+\quad i\in\{1,\dots,m\},
+\label{eq:struggler}
+\end{align}
+which is sent to the server together with model parameters.
+
+\subsection{Server-Side Class-Specialized Weighted Aggregation}
+
+Upon receiving $\{\theta_{t,k}, S_{t,k}\}$ from participating clients, the server aggregates them using a class-prioritized weighting strategy.
+
+\paragraph{Global struggler computation.}
+Compute the global struggler vector and select priority classes:
+\begin{align}
+G_t 
+&= \frac{1}{|\mathcal{S}_t|} \sum_{k\in\mathcal{S}_t} S_{t,k},
+\label{eq:G}
+\\
+\mathcal{P}_t 
+&= \TopP(G_t).
+\label{eq:top_p}
+\end{align}
+
+\paragraph{Priority-aware aggregation.}
+For each $c\in\mathcal{P}_t$, define class-specific client weights and aggregate:
+\begin{align}
+w_{t,k}^{(c)} 
+&= \frac{\max\big(0,\, 1 - S_{t,k}^{(c)}\big)}{\sum_{u\in\mathcal{S}_t} \max\big(0,\, 1 - S_{t,u}^{(c)}\big) + \varepsilon},
+\label{eq:weights}
+\\
+\Theta_{t+1}^{(c)} 
+&= \sum_{k\in\mathcal{S}_t} w_{t,k}^{(c)}\, \theta_{t,k}.
+\label{eq:class_agg}
+\end{align}
+Average over priority classes to obtain the next global model:
+\begin{align}
+\Theta_{t+1} 
+&= \frac{1}{|\mathcal{P}_t|} \sum_{c\in\mathcal{P}_t} \Theta_{t+1}^{(c)}.
+\label{eq:global_avg}
+\end{align}
+
+\subsection{Algorithmic Summary}
+
+Algorithm~\ref{alg:fedsat} summarizes the complete training pipeline of FedSat.
+
+\begin{algorithm}[h!]
+\caption{FedSat Training Procedure}
+\label{alg:fedsat}
+\begin{algorithmic}[1]
+\Require Global model $\Theta_0$, clients $\mathcal{K}$, local learning rate $\eta_l$, global learning rate $\eta_g$, local epochs $E$, total rounds $R$.
+\For{$t = 1$ to $R$}
+    \State Server samples a subset $\mathcal{S}_t \subseteq \mathcal{K}$.
+    \For{each client $k \in \mathcal{S}_t$}
+        \State Initialize $\theta_{t,k} \leftarrow \Theta_t$.
+        \State Train locally using Eq.~\ref{eq:c3e_final} for $E$ epochs.
+        \State Compute struggler vector $S_{t,k}$.
+        \State Send $(\theta_{t,k}, S_{t,k})$ to the server.
+    \EndFor
+    \State Server computes $G_t$ and $\mathcal{P}_t$.
+    \State Aggregate class-wise using Eqs.~\eqref{eq:weights}--\eqref{eq:global_avg} to form $\Theta_{t+1}$.
+\EndFor
+\State \Return Final global model $\Theta^*$.
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Discussion and Properties}
+
+FedSat ensures a communication-neutral, confusion-aware learning process with the following benefits:
+\begin{itemize}
+    \item \textbf{Adaptive asymmetry handling:} dynamically penalizes specific misclassification pairs via the EMA-driven cost matrix.
+    \item \textbf{Class-specialized aggregation:} emphasizes global improvement for underperforming or rare classes.
+    \item \textbf{Lightweight communication:} only a compact per-class struggler vector is exchanged.
+    \item \textbf{Faster convergence:} coupling of confusion-calibrated loss and priority-aware aggregation accelerates stabilization under heterogeneous data.
+\end{itemize}
+Overall, FedSat achieves tighter alignment between local objective shaping and global aggregation, yielding superior robustness and fairness in non-IID federated learning environments.

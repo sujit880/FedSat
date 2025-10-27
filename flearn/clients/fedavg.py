@@ -85,7 +85,7 @@ class FedAvgClient(BaseClient):
         comp = num_epochs * (train_sample_size // batch_size) * batch_size
         bytes_r = graph_size(self.model)
         return (self.num_samples, soln), (bytes_w, comp, bytes_r)
-
+    
     @torch.no_grad()
     def confusion_bincount(self, conf: torch.Tensor, logits: torch.Tensor, targets: torch.Tensor):
         """

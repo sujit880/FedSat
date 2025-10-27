@@ -30,10 +30,10 @@ def get_dataset_folder(options):
     # Handle num_clients in folder name if present
     if "num_clients" in options and options["num_clients"] not in [None, 0]:
         data_settings_str += f"_k{options['num_clients']}"
-    options["data_settings_name"] = data_settings_str  # Store for future reference
     # Handle n_class in folder name if present
     if "n_class" in options and options["n_class"] not in [None, 0]:
-        data_settings_str += f"/c_{options['n_class']}"
+        data_settings_str += f"_fc_{options['n_class']}"
+    options["data_settings_name"] = data_settings_str  # Store for future reference
     # Compose folder path
     folder = f"{options['dataset']}/{data_settings_str}"
     # If DATASET_DIR is set in config_paths, prepend it
@@ -72,8 +72,8 @@ def dataset_ready(options):
     """
     if "data_settings_name" in options and options["data_settings_name"] is not None:
         data_settings_str = options["data_settings_name"]
-        if "n_class" in options and options["n_class"] not in [None, 0]:
-            data_settings_str += f"/c_{options['n_class']}"
+        # if "n_class" in options and options["n_class"] not in [None, 0]:
+        #     data_settings_str += f"_fc_{options['n_class']}"
         folder = f"{options['dataset']}/{data_settings_str}"
         try:
             from flearn.config.config_paths import DATASET_DIR

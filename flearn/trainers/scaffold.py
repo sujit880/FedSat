@@ -5,7 +5,7 @@ from tqdm import trange, tqdm
 from typing import List
 from copy import deepcopy
 from collections import OrderedDict
-from flearn.clients.scaffold_gpt import SCAFFOLDClient
+from flearn.clients.scaffold import SCAFFOLDClient
 from flearn.config.trainer_params import SCAFFOLD_ARGS
 from flearn.utils.constants import CLASSES
 

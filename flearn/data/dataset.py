@@ -17,6 +17,7 @@ CLASSES = {
     "cifar100": 100,
     "emnist": 47,
     "fmnist": 10,
+    "femnist": 62,
     "har": 6,              # Common HAR datasets (e.g., UCI HAR) have 6 activity classes
     "areview": 2,     # Usually binary sentiment classification (positive/negative)
 }
@@ -80,7 +81,6 @@ class MNISTDataset(Dataset):
 
     def __len__(self):
         return len(self.targets)
-
 
 
 class HAR(Dataset):
@@ -937,3 +937,8 @@ class FashionMNISTDataset(Dataset):
 
     def __len__(self):
         return len(self.targets)
+
+
+# Optional alias for FEMNIST (EMNIST byclass, 62 classes) — structure identical to EMNISTDataset
+class FEMNISTDataset(EMNISTDataset):
+    pass

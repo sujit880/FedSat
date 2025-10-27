@@ -7,6 +7,7 @@ from flearn.data.dataset import (
     CIFAR100Dataset,
     EMNISTDataset,
     FashionMNISTDataset,
+    FEMNISTDataset,
 )
 from flearn.config.config_paths import DATASET_DIR
 from flearn.utils.constants import CLASSES
@@ -15,6 +16,7 @@ import numpy as np
 import glob
 import torch
 import random
+import re
 
 # from dotenv import load_dotenv
 import re
@@ -28,6 +30,7 @@ DATASET_DICT = {
     "cifar100": CIFAR100Dataset,
     "emnist": EMNISTDataset,
     "fashionmnist": FashionMNISTDataset,
+    "femnist": FEMNISTDataset,
 }
 DATASET_TYPES = [
     "iid",
@@ -46,7 +49,8 @@ DATASET_TYPES = [
 def get_participants_stat(dataset, dataset_type, n_class):
     # print(f'\n->->: Getting list of participants')
     if n_class not in [None, 0]:
-        pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}/{n_class}"
+        # pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}_fc_{n_class}"
+        pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}"
         # Get the list of files in the directory
         file_list = glob.glob(os.path.join(pickles_dir, "*.pkl"))
         training_files = 0
@@ -104,10 +108,11 @@ def get_dataloader(
     num_workers: int = 0,
     img_float_val_range: tuple[int | float, int | float] = (0, 1),
 ):
-    if n_class not in [None, 0]:
-        pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}/{n_class}"
-    else:
-        pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}"
+    # if n_class not in [None, 0]:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}/c_{n_class}"
+    # else:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}"
+    pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}"
     if os.path.isdir(pickles_dir) is False:
         raise RuntimeError("Please preprocess and create pickles first.")
 
@@ -145,10 +150,11 @@ def get_dataloader(
 def get_testloader(
     dataset: str, data_type: str, n_class: int, batch_size=20, valset_ratio=0.1
 ):
-    if n_class not in [None, 0]:
-        pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}/{n_class}"
-    else:
-        pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}"
+    # if n_class not in [None, 0]:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}_fc_{n_class}"
+    # else:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}"
+    pickles_dir = f"{DATASET_DIR}/{dataset}/{data_type}"
     if os.path.isdir(pickles_dir) is False:
         raise RuntimeError("Please preprocess and create pickles first.")
 
@@ -169,7 +175,11 @@ def get_client_id_indices(dataset):
 
 def get_dataset_stats(dataset, dataset_type: str, n_class: int, client_id: int):
     # calculating datasets stat
-    pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}/{n_class}"
+    # if n_class not in [None, 0]:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}_fc_{n_class}"
+    # else:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}"
+    pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}"
     dataset_stats = torch.zeros(CLASSES[dataset])
     with open(f"{pickles_dir}/{client_id}.pkl", "rb") as f:
         client_dataset: Dataset = pickle.load(f)
@@ -177,3 +187,82 @@ def get_dataset_stats(dataset, dataset_type: str, n_class: int, client_id: int):
             dataset_stats[x.item()] += 1
         dataset_stats[dataset_stats == 0.0] = 1e-8
     return dataset_stats
+
+
+def get_global_class_counts(
+    dataset: str,
+    dataset_type: str,
+    n_class: int | None,
+    limit_clients: int | None = None,
+):
+    """
+    Aggregate per-class sample counts across all client pickles for the given dataset split.
+
+    Args:
+        dataset: dataset name (e.g., 'femnist', 'emnist', 'cifar', 'cifar100').
+        dataset_type: subfolder name for the partitioning (e.g., 'noiid_lbldir_b0_3_k100').
+        n_class: optional extra subfolder for per-class configs; pass None or 0 if unused.
+        limit_clients: if provided, only process the first N client files (for quick checks).
+
+    Returns:
+        A dict with keys:
+            - 'train_counts': Tensor[K]
+            - 'test_counts': Tensor[K] (zeros if test.pkl missing)
+            - 'total_train': int
+            - 'total_test': int
+            - 'num_clients': int (processed clients)
+            - 'pickles_dir': str
+    """
+    # Build pickles directory
+    # if n_class not in [None, 0]:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}_fc_{n_class}"
+    # else:
+    #     pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}"
+    pickles_dir = f"{DATASET_DIR}/{dataset}/{dataset_type}"
+    if os.path.isdir(pickles_dir) is False:
+        raise RuntimeError(f"Pickles directory not found: {pickles_dir}. Please preprocess and create pickles first.")
+
+    K = CLASSES[dataset]
+    train_counts = torch.zeros(K, dtype=torch.long)
+    test_counts = torch.zeros(K, dtype=torch.long)
+
+    # Identify client pickle files: numeric filenames like '0.pkl', '1.pkl', ...
+    file_list = sorted(glob.glob(os.path.join(pickles_dir, "*.pkl")))
+    digit_re = re.compile(r".*/(\d+)\.pkl$")
+
+    client_files = [f for f in file_list if digit_re.match(f)]
+    # Optionally limit clients (useful for a quick sanity check)
+    if limit_clients is not None and limit_clients > 0:
+        client_files = client_files[:limit_clients]
+
+    # Aggregate train (client) counts
+    for fpath in client_files:
+        with open(fpath, "rb") as f:
+            client_dataset: Dataset = pickle.load(f)
+        targets = getattr(client_dataset, "targets", None)
+        if targets is None:
+            raise RuntimeError(f"Client dataset in {fpath} has no 'targets' attribute")
+        targets_t = torch.as_tensor(targets, dtype=torch.long)
+        train_counts += torch.bincount(targets_t, minlength=K)[:K]
+
+    # Test counts (if test.pkl exists)
+    test_pkl = os.path.join(pickles_dir, "test.pkl")
+    total_test = 0
+    if os.path.exists(test_pkl):
+        with open(test_pkl, "rb") as f:
+            test_dataset: Dataset = pickle.load(f)
+        ttargets = torch.as_tensor(getattr(test_dataset, "targets", []), dtype=torch.long)
+        if ttargets.numel() > 0:
+            test_counts = torch.bincount(ttargets, minlength=K)[:K]
+            total_test = int(ttargets.numel())
+
+    result = {
+        "train_counts": train_counts,
+        "test_counts": test_counts,
+        "total_train": int(train_counts.sum().item()),
+        "total_test": total_test,
+        "num_clients": len(client_files),
+        "pickles_dir": pickles_dir,
+    }
+
+    return result

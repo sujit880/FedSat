@@ -70,61 +70,17 @@ class BaseClient(object):
             ).to(self.device)
             CLCrossEntropyLoss = get_loss_fun(self.loss)
             self.criterion = CLCrossEntropyLoss(
-                label_distrib=self.label_distrib, tau=0.1 #defaulte tau was 0.5
+                label_distrib=self.label_distrib, tau=0.5 #defaulte tau was 0.5, 0.1
             )
-        elif loss == "MSL":
-            self.label_distrib = get_dataset_stats(
-                self.dataset,
-                dataset_type=dataset_type,
-                n_class=n_class,
-                client_id=self.id,
-            ).to(self.device)
-            K = CLASSES[self.dataset]
-            C0 = torch.zeros(K, K, device=self.device)
-            MSLCrossEntropyLoss = get_loss_fun(self.loss)
-            self.criterion = MSLCrossEntropyLoss(
-                label_distrib=self.label_distrib, conf_N=C0, tau=0.5
-            ) #v2
-            # self.criterion = MSLCrossEntropyLoss(
-            #     num_classes=K, device=self.device
-            # ) #v3
         elif loss == "FL":
             FocalLossFn = get_loss_fun(self.loss)
             self.criterion = FocalLossFn(alpha=1.0, gamma=2.0)
         elif loss == "LS":
             LSLossFn = get_loss_fun(self.loss)
             self.criterion = LSLossFn(smoothing=0.1)
-
         elif loss == "CB":
             CBLossFn = get_loss_fun(self.loss)
             self.criterion = CBLossFn(beta=0.9999)
-        elif loss == "CS":
-            CrossSensitiveLoss = get_loss_fun(self.loss)
-            self.criterion = CrossSensitiveLoss(
-                torch.ones(
-                    CLASSES[self.dataset], CLASSES[self.dataset], device=self.device
-                )
-            )
-        elif loss == "CSN":
-            CrossSensitiveLoss = get_loss_fun(self.loss)
-            self.criterion = CrossSensitiveLoss(
-                cost_matrix=torch.ones(
-                    CLASSES[self.dataset], CLASSES[self.dataset], device=self.device
-                ),
-            )
-        elif loss == "PSL" or loss=="PSL1":
-            K = CLASSES[self.dataset]
-            C0 = torch.zeros(K, K)
-            MisclassificationAwarePairwiseLoss = get_loss_fun(self.loss)
-            self.criterion = MisclassificationAwarePairwiseLoss(
-                    cost_matrix=C0,
-                    lam=0.5,          # fraction of plain CE (raise if training is noisy)
-                    alpha=0.5,        # blend expected-cost vs pairwise
-                    margin=0.1,       # soft margin; 0.0–0.5 are common
-                    normalize_pairwise=True,
-                    focal_gamma=0.0,  # set to 1.0 to focus hard examples in exp-cost term
-                    reduction="mean"
-                ).to(device)
         elif self.loss == "CAPA":
             K = CLASSES[self.dataset]
             # safe initial weights: uniform off-diagonal for W, zeros for U
@@ -139,31 +95,6 @@ class BaseClient(object):
             self.conf_N = torch.full((K, K), prior, device=self.device)
             self.pred_q = torch.full((K,),     prior, device=self.device)
             self.label_y = torch.full((K,),    prior, device=self.device)
-        elif self.loss == "MCAPA":
-            K = CLASSES[self.dataset]
-            # swap your criterion
-            MCAPALoss = get_loss_fun(self.loss)
-            self.criterion = MCAPALoss(device=self.device, K=K, lam=0.75, mu=0.025, mtau=0.5, tau=2.0, margin=0.05, use_gate=True) # margin=0.05
-        elif self.loss == "MCA":
-            K = CLASSES[self.dataset]
-            # swap your criterion
-            MCALoss = get_loss_fun(self.loss)
-            self.criterion = MCALoss(device=self.device, K=K, lam=0.9, mu=0.05, mtau=0.5, tau=2.0, margin=0.5, use_gate=True) # margin=0.05
-        elif self.loss == "DBCC":
-            K = CLASSES[self.dataset]
-            # swap your criterion
-            DBCCLoss = get_loss_fun(self.loss)
-            self.criterion = DBCCLoss(
-                K=K,
-                alpha=1.0,         # logit-adjust strength (like CB parameter beta)
-                lambda_cc=0.1,     # weight for contrastive term
-                topM=5,            # number of confusing negatives per class
-                ema_m=0.995,       # EMA momentum for priors & confusion
-                warmup_epochs=2,   # epochs before enabling confusion term
-                rare_temp=0.07,    # temp for rare classes (sharper)
-                head_temp=0.10,    # temp for head classes (softer)
-                device=self.device
-            )
         elif self.loss == "DB":
             K = CLASSES[self.dataset]
             # swap your criterion
@@ -174,30 +105,89 @@ class BaseClient(object):
                 ema_m=0.995,       # EMA momentum for priors & confusion
                 device=self.device
             )
-        elif self.loss == "CALB":
-            K = CLASSES[self.dataset]
-            CALBLoss = get_loss_fun(self.loss)
-            self.criterion = CALBLoss(
-                K=K,
-                scale=0.5,          # strength of confusion-based margins
-                ema_m=0.995,        # EMA smoothing for confusion/prior
-                la_alpha=0.0,       # set >0.0 to also apply LA
-                warmup_steps=10000,  # wait ~1 epoch before enabling margins
-                row_norm="l1",
-                symmetrize=True,
-                device=self.device
-            )
         elif self.loss == "CACS":
             K = CLASSES[self.dataset]
             CACSLoss = get_loss_fun(self.loss)
+            # Dictionary of optimal parameters for each dataset
+            CACS_PARAMS = {
+                "cifar10":   dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "cifar":   dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "svhn":      dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "mnist":     dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "fmnist":     dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                # "emnist":   dict(m0=0.05, alpha=0.3, ema_m=0.85, warmup_steps=2000, prior_beta=0.9, conf_beta=0.7, lmu=0.9, cmu=0.4),
+                # "emnist":   dict(ema_m=0.95, warmup_steps=2000, prior_beta=0.95, conf_beta=0.5, lmu=0.9, cmu=0.9),
+                "emnist":   dict(ema_m=0.95, warmup_steps=2000, prior_beta=0.95, conf_beta=0.85, lmu=0.9, cmu=0.9),
+                # "emnist":   dict(ema_m=0.9, warmup_steps=1000, prior_beta=0.99, conf_beta=0.9, lmu=0.5, cmu=0.5),
+                "femnist":   dict(m0=0.05, alpha=0.3, ema_m=0.85, warmup_steps=2000, prior_beta=0.8, conf_beta=0.3, lmu=0.9, cmu=0.4),
+                # "cifar100":  dict(m0=0.1, alpha=0.5, ema_m=0.75, warmup_steps=2000, prior_beta=0.85, conf_beta=0.85, lmu=0.9, cmu=0.4),
+                # "cifar100":  dict(m0=0.1, alpha=0.3, ema_m=0.85, warmup_steps=2000, prior_beta=0.85, conf_beta=0.85, lmu=0.9, cmu=0.4),
+                # "cifar100":  dict(m0=0.1, alpha=0.3, ema_m=0.85, warmup_steps=2000, prior_beta=0.85, conf_beta=0.85, lmu=0.9, cmu=0.9), #best1                
+                # "cifar100":  dict(m0=0.1, alpha=0.1, ema_m=0.85, warmup_steps=2000, prior_beta=0.85, conf_beta=0.85, lmu=0.9, cmu=0.41),
+                # "cifar100":  dict(m0=0.1, alpha=1.0, ema_m=0.85, warmup_steps=2000, prior_beta=0.85, conf_beta=0.85, lmu=0.9, cmu=0.9),   #best1
+                "cifar100":  dict(m0=0.2, alpha=1.0, ema_m=0.85, warmup_steps=2000, prior_beta=0.85, conf_beta=0.85, lmu=0.9, cmu=0.9), 
+                # Add more datasets as needed
+            }
+            # Use default if dataset not found
+            params = CACS_PARAMS.get(self.dataset, dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05))
             self.criterion = CACSLoss(
                 K=K,
-                m0=0.1,            # base cost
-                alpha=0.5,         # confusion scaling
-                ema_m=0.995,       # smooth the confusion
-                warmup_steps=1000, # ~1 epoch # v1,2 = 10000, v3=100
-                prior_beta=0.5,    # set 0.5–1.0 to also apply Bayes logit adjust #v1 0.5 v2=0.3, p_0= 0.0
-                device=self.device
+                device=self.device,
+                **params
+            )
+        elif self.loss == "CALC":
+            # CACS with Label Calibration: pass label distribution and similar dataset-specific params
+            K = CLASSES[self.dataset]
+            # label distribution (per-client/global depending on get_dataset_stats implementation)
+            self.label_distrib = get_dataset_stats(
+                self.dataset,
+                dataset_type=dataset_type,
+                n_class=n_class,
+                client_id=self.id,
+            ).to(self.device)
+            CACSLC = get_loss_fun(self.loss)
+            # reuse the same params dictionary as CACS where available
+            CACS_PARAMS_LC = {
+                "cifar10":   dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "cifar":   dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "svhn":      dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "mnist":     dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "fmnist":     dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05),
+                "emnist":   dict(ema_m=0.95, warmup_steps=2000, prior_beta=0.95, conf_beta=0.85, lmu=0.9, cmu=0.9),
+                "femnist":   dict(m0=0.05, alpha=0.3, ema_m=0.85, warmup_steps=2000, prior_beta=0.8, conf_beta=0.3, lmu=0.9, cmu=0.4),
+                "cifar100":  dict(m0=0.2, alpha=1.0, ema_m=0.85, warmup_steps=2000, prior_beta=0.85, conf_beta=0.85, lmu=0.9, cmu=0.9),
+            }
+            params_lc = CACS_PARAMS_LC.get(self.dataset, dict(m0=0.1, alpha=0.5, ema_m=0.95, warmup_steps=1000, prior_beta=0.95, conf_beta=0.5, lmu=0.95, cmu=0.05))
+            # default tau for label calibration
+            tau_default = 0.1
+            self.criterion = CACSLC(
+                K=K,
+                label_distrib=self.label_distrib,
+                tau=tau_default,
+                device=self.device,
+                **params_lc,
+            )
+        elif self.loss == "LCCA":
+            # Label-Calibrated CE with CACS-style confusion adaptivity
+            K = CLASSES[self.dataset]
+            self.label_distrib = get_dataset_stats(
+                self.dataset,
+                dataset_type=dataset_type,
+                n_class=n_class,
+                client_id=self.id,
+            ).to(self.device)
+            LCCE = get_loss_fun(self.loss)
+            # sensible defaults
+            tau_default = 0.1
+            lambda_conf_default = 0.5
+            ema_m_default = 0.995
+            self.criterion = LCCE(
+                K=K,
+                label_distrib=self.label_distrib,
+                tau=tau_default,
+                lambda_conf=lambda_conf_default,
+                ema_m=ema_m_default,
+                device=self.device,
             )
         else:
             self.criterion = get_loss_fun(self.loss)()
@@ -214,18 +204,7 @@ class BaseClient(object):
             )
         else:
             self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.lr, weight_decay=weight_decay, momentum=momentum)
-        if optm == "PGD":
-            self.optimizer = PerturbedGradientDescent(
-                self.model.parameters(), learning_rate=self.lr
-            )
-        if optm == "PGGD":
-            self.optimizer = PerGodGradientDescent(
-                self.model.parameters(), learning_rate=self.lr
-            )
-        if optm == "SCAFFOLD":
-            self.optimizer = ScaffoldOptimizer(
-                self.model.parameters(), lr=self.lr, weight_decay=1e-4
-            )
+            
         self.trainloader, self.valloader, self.num_samples, self.test_samples = (
             get_dataloader(
                 dataset,
@@ -375,6 +354,32 @@ class BaseClient(object):
         comp = 0
         bytes_r = graph_size(self.model)
         return (self.num_samples, soln), (bytes_w, comp, bytes_r)
+
+    def grad_sensitivity(self):
+        if hasattr(self, 'sensitivity') is False or self.sensitivity is None:
+            self.sensitivity = torch.zeros(
+                len(list(self.model.parameters())), device=self.device
+            )
+            if hasattr(self, 'elastic_mu') is False:
+                self.elastic_mu = 0.95
+        self.model.eval()
+        for x, y in self.valloader:
+            x, y = x.to(self.device), y.to(self.device)
+            logits = self.model(x)
+            loss = self.criterion(logits, y)
+            grads_norm = [
+                torch.norm(layer_grad[0]) ** 2
+                for layer_grad in torch.autograd.grad(
+                    loss, self.model.parameters()
+                )
+            ]
+            for i in range(len(grads_norm)):
+                self.sensitivity[i] = (
+                    self.elastic_mu * self.sensitivity[i]
+                    + (1 - self.elastic_mu) * grads_norm[i].abs()
+                )
+        self.model.train()
+        return self.sensitivity
 
     def check_attribute(self, attribute: str):
         if hasattr(self, attribute):
@@ -582,190 +587,7 @@ class BaseClient(object):
             self.model = self.model.cpu()
 
         return loss, acc, matched, record_stats, pred, targ
-
-    def test_sensitivity_stats(self, record_stats=None):
-
-        self.model.eval()
-        if record_stats == None:
-            record_stats = {}
-        tot_correct, losses, test_sample, pred = (
-            0,
-            0.0,
-            0,
-            np.zeros(CLASSES[self.dataset]),
-        )
-        targ, matched = copy.deepcopy(pred), copy.deepcopy(pred)
-        layer_num = len(trainable_params(self.model))
-        sensitivity = torch.zeros(layer_num, device=self.device)
-        for inputs, labels in self.valloader:
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
-            if len(labels)<=1: continue
-            if self.use_custom_classifier:
-                features = self.model.get_representation_features(inputs)
-                outputs = self.classifier(features)
-            else: outputs = self.model(inputs)
-            loss = self.criterion(outputs, labels)
-            grads_norm = [
-                torch.norm(layer_grad[0]) ** 2
-                for layer_grad in torch.autograd.grad(
-                    loss, trainable_params(self.model)
-                )
-            ]
-            for i in range(len(grads_norm)):
-                sensitivity[i] = (
-                    self.mu * sensitivity[i] + (1 - self.mu) * grads_norm[i].abs()
-                )
-            _, predicted = torch.max(outputs, 1)
-            correct = (predicted == labels).sum().item()
-            tot_correct += correct
-            losses += loss.item()
-            # print(f"Predicted: {predicted}, Target: {labels}") #Print
-            # print(record_stats)
-            if "pred" not in record_stats:
-                record_stats["pred"] = {}
-                record_stats["target"] = {}
-                record_stats["match"] = {}
-            for x, y in zip(predicted, labels):
-                X = x.item()
-                Y = y.item()
-                pred[int(x)] += 1
-                targ[int(y)] += 1
-                if X not in record_stats["pred"]:
-                    # print(f'predicted new class {X}')
-                    record_stats["pred"][X] = 0
-                record_stats["pred"][X] += 1
-                if Y not in record_stats["target"]:
-                    # print(f'predicted new class {Y}')
-                    record_stats["target"][Y] = 0
-                record_stats["target"][Y] += 1
-                if X == Y:
-                    matched[int(Y)] += 1
-                    if Y not in record_stats["match"]:
-                        # print(f'new matced in worker {self.id}: {X}, {Y}')
-                        record_stats["match"][Y] = 0
-                    record_stats["match"][Y] += 1
-            test_sample += len(labels)
-        acc = (tot_correct / test_sample) if test_sample>0.0 else 0.0
-        self.model.train()
-        return (
-            losses,
-            acc,
-            matched,
-            record_stats,
-            pred,
-            targ,
-            (test_sample, np.array(sensitivity.cpu())),
-        )
-
-    def test_sensitivity_stats_t(self, record_stats=None):
-        self.model.eval()
-        if record_stats == None:
-            record_stats = {}
-        tot_correct, losses, test_sample, pred = (
-            0,
-            0.0,
-            0,
-            np.zeros(CLASSES[self.dataset]),
-        )
-        targ, matched = copy.deepcopy(pred), copy.deepcopy(pred)
-        layer_num = len(trainable_params(self.model))
-        sensitivity = torch.zeros(layer_num, device=self.device)
-        for inputs, labels in self.valloader:
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
-            if len(labels)<=1: continue
-            if self.use_custom_classifier:
-                features = self.model.get_representation_features(inputs)
-                outputs = self.classifier(features)
-            else: outputs = self.model(inputs)
-            loss = self.criterion(outputs, labels)
-            grads_norm = [
-                torch.norm(layer_grad[0]) ** 2
-                for layer_grad in torch.autograd.grad(
-                    loss, trainable_params(self.model)
-                )
-            ]
-            for i in range(len(grads_norm)):
-                sensitivity[i] = (
-                    self.miu * sensitivity[i] + (1 - self.miu) * grads_norm[i].abs()
-                )
-            _, predicted = torch.max(outputs, 1)
-            correct = (predicted == labels).sum().item()
-            tot_correct += correct
-            losses += loss.item()
-            # print(f"Predicted: {predicted}, Target: {labels}") #Print
-            # print(record_stats)
-            if "pred" not in record_stats:
-                record_stats["pred"] = {}
-                record_stats["target"] = {}
-                record_stats["match"] = {}
-            for x, y in zip(predicted, labels):
-                X = x.item()
-                Y = y.item()
-                pred[int(x)] += 1
-                targ[int(y)] += 1
-                if X not in record_stats["pred"]:
-                    # print(f'predicted new class {X}')
-                    record_stats["pred"][X] = 0
-                record_stats["pred"][X] += 1
-                if Y not in record_stats["target"]:
-                    # print(f'predicted new class {Y}')
-                    record_stats["target"][Y] = 0
-                record_stats["target"][Y] += 1
-                if X == Y:
-                    matched[int(Y)] += 1
-                    if Y not in record_stats["match"]:
-                        # print(f'new matced in worker {self.id}: {X}, {Y}')
-                        record_stats["match"][Y] = 0
-                    record_stats["match"][Y] += 1
-            test_sample += len(labels)
-        acc = (tot_correct / test_sample) if test_sample>0.0 else 0.0
-        self.model.train()
-        return (
-            losses,
-            acc,
-            matched,
-            record_stats,
-            pred,
-            targ,
-            (test_sample, np.array(sensitivity.cpu())),
-        )
-
-    def test_and_cost_sensitive_stats_t(self, global_coef_matrix=None):
-        self.model.eval()
-        tot_correct, losses, test_sample = 0, 0.0, 0
-        for inputs, labels in self.valloader:
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
-            if len(labels)<=1: continue
-            if self.use_custom_classifier:
-                features = self.model.get_representation_features(inputs)
-                outputs = self.classifier(features)
-            else: outputs = self.model(inputs)
-            loss = self.criterion(outputs, labels)
-            self.model.zero_grad()
-            grads = list(torch.autograd.grad(loss, self.model.parameters()))
-            for named_coeffs, grad in zip(self.coeff_matrix.items(), grads):
-                name, coeffs = named_coeffs
-                grad_norm = torch.tensor(
-                    [torch.norm(x) ** 2 for x in grad], device=self.device
-                )
-                self.coeff_matrix[name] = (
-                    self.miu * coeffs + (1 - self.miu) * grad_norm.abs()
-                ).to(coeffs.device)
-            _, predicted = torch.max(outputs, 1)
-            cost_matrix = torch.ones(
-                self.cost_matrix.shape, device=self.cost_matrix.device
-            )
-            for x, y in zip(labels, predicted):
-                cost_matrix[x][y] = cost_matrix[x][y] + 1
-                if x == y:
-                    tot_correct += 1
-            test_sample += len(labels)
-        acc = (tot_correct / test_sample) if test_sample>0.0 else 0.0
-        self.model.train()
-        # for k , v in self.coeff_matrix.items():
-        #     print(f"\nCoefficient:\n{k}: {v.shape}")
-        return (test_sample, self.coeff_matrix.values()), cost_matrix
-
+    
     def test_and_cost_matrix_stats_t(self, modelInCPU: bool = False):
         self.model.eval()
 
@@ -801,3 +623,4 @@ class BaseClient(object):
 
         self.model.train()
         return cost_matrix
+

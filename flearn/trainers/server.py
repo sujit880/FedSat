@@ -162,10 +162,117 @@ class BaseServer(object):
             f"0_" + str(self.learning_rate).split(".")[1]
         )  # '0_01' if self.learning_rate == 0.01 else '0_001'
         self.le = f"" # Loss name extension
-        if self.trainer == "fedavg":         
+        if self.loss is not None:
+            if self.loss == "CAPA":
+                # client_ = self.clients[0]
+                # a = str(client_.criterion.prior_beta).split(".")
+                self.le += f"(P_{0}_{5}AB_{0}_{0}{"1"}_m_{0}_{"2"}K_{6}S)"
+            if self.loss == "CL":
+                client_ = self.clients[0]
+                a = str(client_.criterion.tau).split(".")
+                if len(a)>1:
+                    tau = f"{a[0]}_{a[1]}"
+                else: tau = f"{a[0]}"
+                self.le += f"(tau_{tau})"
+            if self.loss == "DB":
+                client_ = self.clients[0]
+                a = str(client_.criterion.alpha).split(".")
+                if len(a)>1:
+                    alpha = f"{a[0]}_{a[1]}"
+                else: alpha = f"{a[0]}"
+                a = str(client_.criterion.ema_m).split(".")
+                if len(a)>1:
+                    ema_m = f"{a[0]}_{a[1]}"
+                else: ema_m = f"{a[0]}"
+                self.le += f"(v2_alpha_{alpha}_ema_{ema_m})"
             if self.loss == "CACS":
-                self.le += f"v52_p_5"
-                
+                client_ = self.clients[0]
+                # a = str(client_.criterion.m0).split(".")
+                # if len(a)>1:
+                #     m0 = f"{a[0]}_{a[1]}"
+                # else: m0 = f"{a[0]}"
+                # a = str(client_.criterion.alpha).split(".")
+                # if len(a)>1:
+                #     alpha = f"{a[0]}_{a[1]}"
+                # else: alpha = f"{a[0]}"
+                a = str(client_.criterion.prior_beta).split(".")
+                if len(a)>1:
+                    pb = f"{a[0]}_{a[1]}"
+                else: pb = f"{a[0]}"
+                a = str(client_.criterion.conf_beta).split(".")
+                if len(a)>1:
+                    cb = f"{a[0]}_{a[1]}"
+                else: cb = f"{a[0]}"
+                a = str(client_.criterion.lmu).split(".")
+                if len(a)>1:
+                    lmu = f"{a[0]}_{a[1]}"
+                else: lmu = f"{a[0]}"
+                a = str(client_.criterion.cmu).split(".")
+                if len(a)>1:
+                    cmu = f"{a[0]}_{a[1]}"
+                else: cmu = f"{a[0]}"
+                a = str(client_.criterion.ema_m).split(".")
+                if len(a)>1:
+                    ema_m = f"{a[0]}_{a[1]}"
+                else: ema_m = f"{a[0]}"
+                # self.le += f"(m_{m0}_a_{alpha}_c{cb}_p{pb}_lmu_{lmu}_cmu_{cmu}_ema_{ema_m})" #v1 to v8
+                # self.le += f"(v9_c{cb}_p{pb}_lmu_{lmu}_cmu_{cmu}_ema_{ema_m})" #v9
+                self.le += f"(p{pb}_c{cb}_lmu_{lmu}_cmu_{cmu}_ema_{ema_m})" #v10
+            if self.loss == "CALC":
+                client_ = self.clients[0]
+                # CACS_LC: include prior_beta, conf_beta, lmu, cmu, ema_m and tau
+                a = str(getattr(client_.criterion, 'prior_beta', 0.0)).split('.')
+                if len(a) > 1:
+                    pb = f"{a[0]}_{a[1]}"
+                else:
+                    pb = f"{a[0]}"
+                a = str(getattr(client_.criterion, 'conf_beta', 0.0)).split('.')
+                if len(a) > 1:
+                    cb = f"{a[0]}_{a[1]}"
+                else:
+                    cb = f"{a[0]}"
+                a = str(getattr(client_.criterion, 'lmu', 0.9)).split('.')
+                if len(a) > 1:
+                    lmu = f"{a[0]}_{a[1]}"
+                else:
+                    lmu = f"{a[0]}"
+                a = str(getattr(client_.criterion, 'cmu', 0.01)).split('.')
+                if len(a) > 1:
+                    cmu = f"{a[0]}_{a[1]}"
+                else:
+                    cmu = f"{a[0]}"
+                a = str(getattr(client_.criterion, 'ema_m', getattr(client_.criterion, 'ema_m', 0.995))).split('.')
+                if len(a) > 1:
+                    ema_m = f"{a[0]}_{a[1]}"
+                else:
+                    ema_m = f"{a[0]}"
+                # tau comes from the client criterion for label calibration
+                a = str(getattr(client_.criterion, 'tau', 0.1)).split('.')
+                if len(a) > 1:
+                    tau = f"{a[0]}_{a[1]}"
+                else:
+                    tau = f"{a[0]}"
+                self.le += f"(p{pb}_c{cb}_lmu_{lmu}_cmu_{cmu}_ema_{ema_m}_tau_{tau})"
+            if self.loss == "LCCA":
+                client_ = self.clients[0]
+                # LCCA: include tau, lambda_conf and ema_m
+                a = str(getattr(client_.criterion, 'tau', 0.1)).split('.')
+                if len(a) > 1:
+                    tau = f"{a[0]}_{a[1]}"
+                else:
+                    tau = f"{a[0]}"
+                a = str(getattr(client_.criterion, 'lambda_conf', 0.5)).split('.')
+                if len(a) > 1:
+                    lconf = f"{a[0]}_{a[1]}"
+                else:
+                    lconf = f"{a[0]}"
+                a = str(getattr(client_.criterion, 'ema_m', 0.995)).split('.')
+                if len(a) > 1:
+                    ema_m = f"{a[0]}_{a[1]}"
+                else:
+                    ema_m = f"{a[0]}"
+                self.le += f"(tau_{tau}_lconf_{lconf}_ema_{ema_m})"
+        print(f"Loss extension: {self.le}")       
         self.experiment_name = f"{self.trainer}_M_{self.model}_{self.dataset}_nc_{self.n_class}_{self.dataset_type}_L_{self.loss}_lr_{Lr_}_B_{self.batch_size}_C_{self.clients_per_round}_E_{self.num_epochs}_{self.num_rounds}"
         
         m_name = self.model if self.model is not None else "MLP"
@@ -173,12 +280,57 @@ class BaseServer(object):
         self.accuracy_global = []
         self.loss_global = []
         self.accuracy_clients = {}
-        self.desc = f"Algo: {self.trainer}, M-{self.model}, D-{self.dataset}, N-{self.n_class}, T-{self.dataset_type}, LR-{self.learning_rate}, E-{self.num_epochs}, L-{self.loss}{self.le}, B-{self.batch_size}, C-{self.clients_per_round}, G-{self.device}, Test-{self.testing_mode}"
+        self.desc = f"Algo: {self.trainer}, M-{self.model}, D-{self.dataset}, N-{self.n_class}, T-{self.dataset_type}, LR-{self.learning_rate}, E-{self.num_epochs}, L-{self.loss}, B-{self.batch_size}, C-{self.clients_per_round}, G-{self.device}, Test-{self.testing_mode}"
+
+        if self.agg is not None:
+            self.ae = f""
+            if self.agg == "fedsat" or self.agg == "fedsatc" or self.agg == "prawgs" or self.agg == "prawgcs":
+                a = str(self.top_p).split(".")
+                if len(a)>1:
+                    top_p = f"{a[0]}_{a[1]}"
+                else: top_p = f"{a[0]}"
+                self.ae += f"(topP_{top_p})"
+            if self.agg == "fedadam":
+                a = str(self.server_learning_rate).split(".")
+                if len(a)>1:
+                    s_lr = f"{a[0]}_{a[1]}"
+                else: s_lr = f"{a[0]}"
+                self.ae += f"(slr_{s_lr})"
+            if self.agg == "fedyogi":
+                a = str(self.server_learning_rate).split(".")
+                if len(a)>1:
+                    s_lr = f"{a[0]}_{a[1]}"
+                else: s_lr = f"{a[0]}"
+                self.ae += f"(slr_{s_lr})"
+            if self.agg == "fedavgm":
+                a = str(self.server_learning_rate).split(".")
+                if len(a)>1:
+                    s_lr = f"{a[0]}_{a[1]}"
+                else: s_lr = f"{a[0]}"
+                a = str(self.server_momentum).split(".")
+                if len(a)>1:
+                    s_m = f"{a[0]}_{a[1]}"
+                else: s_m = f"{a[0]}"
+                self.ae += f"(slr_{s_lr}_sm_{s_m})" # default server_momentum = 0.9, default server_learning_rate = 1.0
+            if self.agg == "elastic":
+                self.ae += f"(v2_mu_0_95_tau_0_5)" # default elastic_momentum = 0.95, default tau = 0.5
+
+            agg_extension = f"_A_{self.agg}{self.ae}"
+            print(f"agg_extension: {agg_extension}")
+            self.experiment_name = self.experiment_name + agg_extension
+            self.experiment_short_name = self.experiment_short_name + agg_extension
+            self.desc = self.desc + f", Agg-{self.agg}"
 
         if self.trainer == "floco":
             self.experiment_name = self.experiment_name + f"_tau_{self.tau}"
             self.experiment_short_name = self.experiment_short_name + f"_tau_{self.tau}"
             self.desc = self.desc + f", Tau-{self.tau}"
+
+        if self.trainer == "moon":
+            extension = f"(mu_{str(self.mu).replace('.', '_')}_tau_{str(self.tau).replace('.', '_')}_{self.prev_model_version})"
+            self.experiment_name = self.experiment_name + f"_{extension}"
+            self.experiment_short_name = self.experiment_short_name + f"_{extension}"
+            print(f"extension: {extension}")
 
         if self.num_rounds%100==7:
             self.experiment_name = self.experiment_name + f"_sm"
@@ -309,13 +461,15 @@ class BaseServer(object):
         if round % self.eval_every == 0:
             train_acc, local_acc, robust_acc, global_acc = None, None, None, None
             stats_train = self.train_error_and_loss()
-            self.eval_client_features(round=round, split_name=f"train")
-            self.eval_client_features(round=round, split_name=f"val")
+            if self.plot_features:
+                self.eval_client_features(round=round, split_name=f"train")
+                self.eval_client_features(round=round, split_name=f"val")
             for c in self.clients:
                 setClientModelFunc(c, **ClientModelFuncKwargs)
             # stats = self.test()
-            self.eval_client_features(round=round, split_name=f"test")
-            self.eval_global_features(round=round)
+            if self.plot_features:
+                self.eval_client_features(round=round, split_name=f"test")
+                self.eval_global_features(round=round)
             if self.robust_test:
                 stats = self.test_model(selected_clients=self.select_clients(round=round, num_clients=int(len(self.clients)*0.1)))
                 robust_acc = np.sum(stats[3]) * 1.0 / np.sum(stats[2])

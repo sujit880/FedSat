@@ -22,6 +22,7 @@ from flearn.data.dataset import (
     HARDataset,
     AmazonReview,
     AmazonReviewDataset,
+    FEMNISTDataset,
     # DomainNet,
     # DomainNetDataset,
 )
@@ -52,6 +53,8 @@ DATASET = {
     "cifar100": (CIFAR100, CIFAR100Dataset),
     "emnist": (EMNIST, EMNISTDataset),
     "fmnist": (FashionMNIST, FashionMNISTDataset),
+    # FEMNIST: use EMNIST split 'byclass' to get 62 classes
+    "femnist": (EMNIST, FEMNISTDataset),
     "har": (HAR, HARDataset),
     "areview": (AmazonReview, AmazonReviewDataset),
     # "domainnet": (DomainNet, DomainNetDataset),
@@ -84,6 +87,7 @@ MEAN = {
     "cifar": (0.4914, 0.4822, 0.4465),
     "cifar100": (0.4914, 0.4822, 0.4465),
     "emnist": (0.1751,),
+    "femnist": (0.1751,),
     "fmnist": (0.2860,),
     "domainnet": (0.485, 0.456, 0.406),
     "har": None,
@@ -95,6 +99,7 @@ STD = {
     "cifar": (0.2023, 0.1994, 0.2010),
     "cifar100": (0.2023, 0.1994, 0.2010),
     "emnist": (0.3333,),
+    "femnist": (0.3333,),
     "fmnist": (0.3530,),
     "domainnet": (0.229, 0.224, 0.225),
     "har": None,
@@ -106,6 +111,7 @@ SIZE = {
     "cifar": (32, 32),
     "cifar100": (32, 32),
     "emnist": (28, 28),
+    "femnist": (28, 28),
     "fmnist": (28, 28),
     "domainnet": (64, 64),
     "har": (128, 9),  # example for sensor data shape
@@ -153,7 +159,7 @@ def preprocess(args: Namespace) -> None:
         data_settings_str += f"_k{args.client_num_in_total}"
     # Handle n_class in folder name if present
     if hasattr(args, "classes") and args.classes not in [None, 0]:
-        data_settings_str += f"/c_{args.classes}"
+        data_settings_str += f"_fc_{args.classes}"
     # Compose folder path
     dataset_dir = f"{CURRENT_DIR}/{args.dataset}"
     pickles_dir = f"{CURRENT_DIR}/{args.dataset}/{data_settings_str}"
@@ -193,6 +199,18 @@ def preprocess(args: Namespace) -> None:
         )
         testset = ori_dataset(
             dataset_dir, split="balanced", train=False, transform=transforms.ToTensor()
+        )
+    elif args.dataset == "femnist":
+        # FEMNIST uses EMNIST with split 'byclass' (62 classes)
+        trainset = ori_dataset(
+            dataset_dir,
+            split="byclass",
+            train=True,
+            download=True,
+            transform=transforms.ToTensor(),
+        )
+        testset = ori_dataset(
+            dataset_dir, split="byclass", train=False, transform=transforms.ToTensor()
         )
     elif args.dataset == "domainnet":
         trainset = ori_dataset(

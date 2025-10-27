@@ -32,6 +32,8 @@
 TRAINERS = {
     "local": {"server": "LocalServer", "client": "LocalClient"},
     "fedavg": {"server": "FedAvgServer", "client": "FedAvgClient"},
+    "fedrs": {"server": "FedRSServer", "client": "FedRSClient"},
+    "ccvr": {"server": "CCVRServer", "client": "CCVRClient"},
     "elastic": {"server": "FedAvgServer", "client": "FedAvgClient"},
     "fedavgg": {"server": "FedAvgServer", "client": "FedAvgClient"},
     "fedavggs": {"server": "FedAvgServer", "client": "FedAvgClient"},
@@ -81,7 +83,7 @@ TRAINERS = {
     "ditto": {"server": "FedDittoServer", "client": "DittoClient"},
 }
 
-DATASETS = ["cifar", "cifar10", "cifar100", "mnist", "fmnist", "areview"]
+DATASETS = ["cifar", "cifar10", "cifar100", "mnist", "fmnist", "emnist", "femnist", "areview", "har"]
 
 DATASETS_TYPES = ["iid", "niid", "mix", "dniid", "synthetic", "syntheticM"]
 
@@ -304,8 +306,20 @@ PARSER_ARGS = [
         "args": ["--loss"],
         "kwargs": {
             "type": str,
-            "choices": ["CE", "CL", "MSL", "FL", "LS", "CB", "MSE", "CS", "CSN", "PSL", "PSL1", "CAPA", "MCAPA", "MCA", "DBCC", "DB", "CALB", "CACS"],
+            "choices": ["CE", "CL", "MSL", "FL", "LS", "CB", "MSE", "CS", "CSN", "PSL",
+                        "PSL1", "CAPA", "MCAPA", "MCA", "DBCC", "DB", "CALB", "CACS",
+                        "CALC", "LCCA"
+                        ],
             "default": "CE",
+        },
+    },
+    {
+        "args": ["--agg"],  # Aggregation method
+        "kwargs": {
+            "type": str,
+            # "choices": ["fedavg", "fedadam", "scaffold", "fedyogi"],
+            "help": "Name of Aggregation method. E.g., fedavg, fedadam, mean, fedyogi",
+            "default": None,
         },
     },
     {

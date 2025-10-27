@@ -92,7 +92,9 @@ class MLP_MNIST(nn.Module):
 
 ARGS = {
     "mnist": (1, 256, 10),
-    "emnist": (1, 256, 62),
+    # use balanced split (47) for emnist; femnist (byclass) has 62
+    "emnist": (1, 256, 47),
+    "femnist": (1, 256, 62),
     "fmnist": (1, 256, 10),
     "cifar": (3, 400, 10),
     "cifar10": (3, 400, 10),
@@ -540,7 +542,7 @@ class BasicBlock(nn.Module):
         return out
 
 
-Resnet8_avg_pool = {"mnist": 8, "cifar10": 9, "cifar": 9, "cifar100": 9, "fmnist": 8, "har": None, "areview": None,}
+Resnet8_avg_pool = {"mnist": 8, "cifar10": 9, "cifar": 9, "cifar100": 9, "fmnist": 8, "emnist": 8, "femnist": 8, "har": None, "areview": None,}
 
 
 class ResNet8(nn.Module):
@@ -991,6 +993,8 @@ def get_model(dataset, device):
 
 CHANNELS = {
     "mnist": 1,
+    "emnist": 1,
+    "femnist": 1,
     "cifar": 3,
     "cifar10": 3,
     "cifar100": 3,
@@ -1011,24 +1015,27 @@ MLP = {
 
 
 def get_model_by_name(dataset, device, model):
-    # print(f"\nIn model.py to build: {model} model")
-    MODEL_DICT = {"mlp": MLP[dataset], 
-                "resnet18": ResNet18(BasicBlock, [2, 2, 2, 2], input_channels=CHANNELS[dataset], num_classes=CLASSES[dataset]),
-                'tresnet18p': TorchResNet(model_name='resnet18', pretrain=True, num_classes=CLASSES[dataset]),
-                'tresnet34p': TorchResNet(model_name='resnet34', pretrain=True, num_classes=CLASSES[dataset]),
-                'tresnet50p': TorchResNet(model_name='resnet50', pretrain=True, num_classes=CLASSES[dataset]),
-                'tresnet101p': TorchResNet(model_name='resnet101', pretrain=True, num_classes=CLASSES[dataset]),
-                'tresnet18': TorchResNet(model_name='resnet18', pretrain=False, num_classes=CLASSES[dataset]),
-                'tresnet34': TorchResNet(model_name='resnet34', pretrain=False, num_classes=CLASSES[dataset]),
-                'tresnet50': TorchResNet(model_name='resnet50', pretrain=False, num_classes=CLASSES[dataset]),
-                'tresnet101': TorchResNet(model_name='resnet101', pretrain=False, num_classes=CLASSES[dataset]),
-                "resnet8": ResNet8(BasicBlock, [1, 1], dataset=dataset, input_channels=CHANNELS[dataset], num_classes=CLASSES[dataset]),
-                "lenet5": LeNet5(dataset=dataset),
-                # Add BERT and TextCNN here, assuming you have defined these classes:
-                "bert": BERTClassifier(dataset=dataset),
-                # "textcnn": TextCNN(vocab_size=VOCAB_SIZE[dataset], embed_dim=EMBED_DIM[dataset], num_classes=CLASSES[dataset]),
+    # Build lazily to avoid KeyError for datasets not present in some maps (e.g., MLP[dataset])
+    MODEL_FACTORIES = {
+        "mlp": lambda: MLP.get(dataset),
+        "resnet18": lambda: ResNet18(BasicBlock, [2, 2, 2, 2], input_channels=CHANNELS[dataset], num_classes=CLASSES[dataset]),
+        'tresnet18p': lambda: TorchResNet(model_name='resnet18', pretrain=True, num_classes=CLASSES[dataset]),
+        'tresnet34p': lambda: TorchResNet(model_name='resnet34', pretrain=True, num_classes=CLASSES[dataset]),
+        'tresnet50p': lambda: TorchResNet(model_name='resnet50', pretrain=True, num_classes=CLASSES[dataset]),
+        'tresnet101p': lambda: TorchResNet(model_name='resnet101', pretrain=True, num_classes=CLASSES[dataset]),
+        'tresnet18': lambda: TorchResNet(model_name='resnet18', pretrain=False, num_classes=CLASSES[dataset]),
+        'tresnet34': lambda: TorchResNet(model_name='resnet34', pretrain=False, num_classes=CLASSES[dataset]),
+        'tresnet50': lambda: TorchResNet(model_name='resnet50', pretrain=False, num_classes=CLASSES[dataset]),
+        'tresnet101': lambda: TorchResNet(model_name='resnet101', pretrain=False, num_classes=CLASSES[dataset]),
+        "resnet8": lambda: ResNet8(BasicBlock, [1, 1], dataset=dataset, input_channels=CHANNELS[dataset], num_classes=CLASSES[dataset]),
+        "lenet5": lambda: LeNet5(dataset=dataset),
+        "bert": lambda: BERTClassifier(dataset=dataset),
+        # "textcnn": lambda: TextCNN(vocab_size=VOCAB_SIZE[dataset], embed_dim=EMBED_DIM[dataset], num_classes=CLASSES[dataset]),
     }
-    c_model = MODEL_DICT[model].to(device)
-    # print(c_model)
-    return c_model
+    if model not in MODEL_FACTORIES:
+        raise KeyError(f"Unknown model '{model}'")
+    instance = MODEL_FACTORIES[model]()
+    if instance is None:
+        raise KeyError(f"Model '{model}' is not supported for dataset '{dataset}'")
+    return instance.to(device)
 

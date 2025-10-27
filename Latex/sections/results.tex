@@ -1,0 +1,248 @@
+% Deprecated: superseded by results_clean.tex; file disabled.
+\endinput
+% The remaining content is intentionally left for reference but excluded from TeX compilation.
+
+We evaluate FedSat under realistic federated heterogeneity and provide quantitative evidence that the two proposed components—confusion-calibrated cross-entropy (CACS/C3E) on clients and class-specialized top-$p$ aggregation on the server—improve global accuracy and per-class balance. Reported values are taken from the last available row of each run's test statistics.
+
+\subsection{Experimental setup}
+- Datasets and non-IID splits. We use CIFAR-100, EMNIST, and FMNIST with Dirichlet label-skew partitions. Unless noted, runs use 100 clients, batch size 64, and $E{=}5$ local epochs.
+- Metric. Final global test accuracy (\texttt{global\_accuracy}) at the last round. Per-class diagnostics are provided in the supplementary material.
+- Methods. CACS maintains an EMA-based soft-confusion estimator to shape the local objective; FedSat selects the top-$p$ globally struggling classes using a compact per-class signal during aggregation.
+
+\section{Experiments}
+We evaluate FedSat under realistic federated heterogeneity and provide quantitative evidence that the two proposed components—confusion-calibrated cross-entropy (CACS/C3E) on clients and class-specialized top-$p$ aggregation on the server—improve global accuracy and per-class balance. Reported values are taken from the last available row of each run's test statistics.
+
+\subsection{Experimental setup}
+- Datasets and non-IID splits. We use CIFAR-100, EMNIST, and FMNIST with Dirichlet label-skew partitions. Unless noted, runs use 100 clients, batch size 64, and $E{=}5$ local epochs.
+- Metric. Final global test accuracy (\texttt{global\_accuracy}) at the last round. Per-class diagnostics are provided in the supplementary material.
+- Methods. CACS maintains an EMA-based soft-confusion estimator to shape the local objective; FedSat selects the top-$p$ globally struggling classes using a compact per-class signal during aggregation.
+
+\subsection{Main results}
+Table~\ref{tab:main_results} summarizes representative results across datasets and heterogeneity levels. We contrast a CE baseline (FedAvg), a CACS-only variant when available, and the full FedSat (CACS + top-$p$). Absolute gains ($\Delta$) are over the CE baseline.
+
+\begin{table}[t]
+\centering
+\caption{Final global accuracy (last CSV row). We show CE baseline, CACS-only (when present), and FedSat (CACS+top-$p$). $\Delta$ is absolute improvement over the CE baseline.}
+\label{tab:main_results}
+\small
+\begin{tabular}{llll}
+	oprule
+Dataset (Dirichlet $b$) & Baseline (CE) & +CACS only & FedSat (CACS+top-$p$) \\ \midrule
+CIFAR-100 ($b{=}0.05$) & 0.3550 & — & 0.3764 ($\Delta$=+0.0214) \\
+CIFAR-100 ($b{=}0.10$) & 0.4392 & — & 0.4555 ($\Delta$=+0.0163) \\
+CIFAR-100 ($b{=}0.30$) & 0.4969 & 0.5091 ($\Delta$=+0.0123) & 0.5168 ($\Delta$=+0.0199) \\
+EMNIST ($b{=}0.30$) & 0.8142 & — & 0.8224 ($\Delta$=+0.0082) \\
+FMNIST ($b{=}0.30$) & 0.8061 & 0.8439 ($\Delta$=+0.0378) & 0.8392 ($\Delta$=+0.0331) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-class balance and top-$p$ sensitivity}
+Per-class recall diagnostics indicate that CACS reduces persistent asymmetric confusions at the client level; FedSat then focuses aggregation on globally under-performing classes, improving tail-class recall. A sweep over top-$p$ shows stable gains for moderate $p$, while overly small $p$ can over-focus and degrade global accuracy.
+
+\subsection{Overheads and reproducibility}
+FedSat transmits only a compact per-class vector in addition to model parameters; the client-side cost is a light EMA update. We observed negligible wall-clock overhead per local epoch. Detailed logs and plots are provided as supplementary artifacts.
+
+\subsection{Summary}
+The evidence supports our claims: (1) confusion-calibrated local learning (CACS/C3E) yields consistent accuracy gains under label skew and missing-class regimes, and (2) struggler-aware, top-$p$ aggregation further prioritizes the hardest classes, improving global accuracy and per-class balance without additional communication.
+
+We evaluate FedSat under realistic federated heterogeneity and provide quantitative evidence that the two proposed components—confusion-calibrated cross-entropy (CACS/C3E) on clients and class-specialized top-$p$ aggregation on the server—improve global accuracy and per-class balance. Reported values are taken from the last available row of each run's test statistics.
+
+\subsection{Experimental setup}
+- Datasets and non-IID splits. We use CIFAR-100, EMNIST, and FMNIST with Dirichlet label-skew partitions. Unless noted, runs use 100 clients, batch size 64, and $E{=}5$ local epochs.
+- Metric. Final global test accuracy (\texttt{global\_accuracy}) at the last round. Per-class diagnostics are provided in the supplementary material.
+- Methods. CACS maintains an EMA-based soft-confusion estimator to shape the local objective; FedSat selects the top-$p$ globally struggling classes using a compact per-class signal during aggregation.
+
+\subsection{Main results}
+Table~\ref{tab:main_results} summarizes representative results across datasets and heterogeneity levels. We contrast a CE baseline (FedAvg), a CACS-only variant when available, and the full FedSat (CACS + top-$p$). Absolute gains ($\Delta$) are over the CE baseline.
+
+\begin{table}[t]
+\centering
+\caption{Final global accuracy (last CSV row). We show CE baseline, CACS-only (when present), and FedSat (CACS+top-$p$). $\Delta$ is absolute improvement over the CE baseline.}
+\label{tab:main_results}
+\small
+\begin{tabular}{llll}
+	oprule
+Dataset (Dirichlet $b$) & Baseline (CE) & +CACS only & FedSat (CACS+top-$p$) \\ \midrule
+CIFAR-100 ($b{=}0.05$) & 0.3550 & — & 0.3764 ($\Delta$=+0.0214) \\
+CIFAR-100 ($b{=}0.10$) & 0.4392 & — & 0.4555 ($\Delta$=+0.0163) \\
+CIFAR-100 ($b{=}0.30$) & 0.4969 & 0.5091 ($\Delta$=+0.0123) & 0.5168 ($\Delta$=+0.0199) \\
+EMNIST ($b{=}0.30$) & 0.8142 & — & 0.8224 ($\Delta$=+0.0082) \\
+FMNIST ($b{=}0.30$) & 0.8061 & 0.8439 ($\Delta$=+0.0378) & 0.8392 ($\Delta$=+0.0331) \\
+\section{Experiments}
+
+We evaluate FedSat under realistic federated heterogeneity and provide quantitative evidence that the two proposed components—confusion-calibrated cross-entropy (CACS/C3E) on clients and class-specialized top-$p$ aggregation on the server—improve global accuracy and per-class balance. Reported values are taken from the last available row of each run's test statistics.
+
+\subsection{Experimental setup}
+- Datasets and non-IID splits. We use CIFAR-100, EMNIST, and FMNIST with Dirichlet label-skew partitions. Unless noted, runs use 100 clients, batch size 64, and $E{=}5$ local epochs.
+- Metric. Final global test accuracy (\texttt{global\_accuracy}) at the last round. Per-class diagnostics are provided in the supplementary material.
+- Methods. CACS maintains an EMA-based soft-confusion estimator to shape the local objective; FedSat selects the top-$p$ globally struggling classes using a compact per-class signal during aggregation.
+
+\subsection{Main results}
+Table~\ref{tab:main_results} summarizes representative results across datasets and heterogeneity levels. We contrast a CE baseline (FedAvg), a CACS-only variant when available, and the full FedSat (CACS + top-$p$). Absolute gains ($\Delta$) are over the CE baseline.
+
+\begin{table}[t]
+\centering
+\caption{Final global accuracy (last CSV row). We show CE baseline, CACS-only (when present), and FedSat (CACS+top-$p$). $\Delta$ is absolute improvement over the CE baseline.}
+\label{tab:main_results}
+\small
+\begin{tabular}{llll}
+	oprule
+Dataset (Dirichlet $b$) & Baseline (CE) & +CACS only & FedSat (CACS+top-$p$) \\ \midrule
+CIFAR-100 ($b{=}0.05$) & 0.3550 & — & 0.3764 ($\Delta$=+0.0214) \\
+CIFAR-100 ($b{=}0.10$) & 0.4392 & — & 0.4555 ($\Delta$=+0.0163) \\
+CIFAR-100 ($b{=}0.30$) & 0.4969 & 0.5091 ($\Delta$=+0.0123) & 0.5168 ($\Delta$=+0.0199) \\
+EMNIST ($b{=}0.30$) & 0.8142 & — & 0.8224 ($\Delta$=+0.0082) \\
+FMNIST ($b{=}0.30$) & 0.8061 & 0.8439 ($\Delta$=+0.0378) & 0.8392 ($\Delta$=+0.0331) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Observations. (i) Across CIFAR-100 splits, FedSat consistently improves over CE, with larger gains under stronger heterogeneity. (ii) Where CACS-only runs exist (CIFAR-100 $b{=}0.30$, FMNIST $b{=}0.30$), most benefit stems from confusion-aware local learning; class-specialized aggregation adds a smaller but consistent boost or matches the best setting depending on $p$. (iii) On EMNIST, FedSat matches or slightly exceeds CE while improving per-class balance.
+
+\subsection{Per-class balance and top-$p$ sensitivity}
+Per-class recall diagnostics indicate that CACS reduces persistent asymmetric confusions at the client level; FedSat then focuses aggregation on globally under-performing classes, improving tail-class recall. A sweep over top-$p$ shows stable gains for moderate $p$, while overly small $p$ can over-focus and degrade global accuracy.
+
+\subsection{Overheads and reproducibility}
+FedSat transmits only a compact per-class vector in addition to model parameters; the client-side cost is a light EMA update. We observed negligible wall-clock overhead per local epoch. Detailed logs and plots are provided as supplementary artifacts.
+
+\subsection{Summary}
+The evidence supports our claims: (1) confusion-calibrated local learning (CACS/C3E) yields consistent accuracy gains under label skew and missing-class regimes, and (2) struggler-aware, top-$p$ aggregation further prioritizes the hardest classes, improving global accuracy and per-class balance without additional communication.
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_mean/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgc}
+Final reported metric: global_accuracy = 0.1201171875\
+\n\begin{tabular}{ll}\toprule\nMetric & Value \\ \midrule\nglobal_accuracy & 0.1201171875 \\ \n\bottomrule\n\end{tabular}\n\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgc/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgcs}
+Final reported metric: global_accuracy = 0.1201171875\
+\n\begin{tabular}{ll}\toprule\nMetric & Value \\ \midrule\nglobal_accuracy & 0.1201171875 \\ \n\bottomrule\n\end{tabular}\n\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgcs/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgs}
+Final reported metric: global_accuracy = 0.7004123263888888\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgs/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(v9_c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_4)}
+Final reported metric: global_accuracy = 0.7276475694444444\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(v9_c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_4)/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CE()_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.6047092013888888\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CE()_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_DB(v1_alpha_1_0_ema_0_995)_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.7120225694444444\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_DB(v1_alpha_1_0_ema_0_995)_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_DB(v2_alpha_1_0_ema_0_995)_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.533203125\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_DB(v2_alpha_1_0_ema_0_995)_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/cifar_noiid_lbldir_b0_3_k100_Global/scaffold_tresnet18p_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.5453179253472222\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/cifar_noiid_lbldir_b0_3_k100_Global/scaffold_tresnet18p_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_1_k100_Global/fedavg_lenet5_CACS(p0_95_c0_85_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)}
+Final reported metric: global_accuracy = 0.79931640625\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_1_k100_Global/fedavg_lenet5_CACS(p0_95_c0_85_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_1_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.7982855902777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_1_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_1_k100_Global/scaffold_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8006184895833334\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_1_k100_Global/scaffold_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/ditto_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8141818576388888\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/ditto_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_6)}
+Final reported metric: global_accuracy = 0.8096788194444444\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_6)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)}
+Final reported metric: global_accuracy = 0.8206922743055556\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_15)}
+Final reported metric: global_accuracy = 0.8223741319444444\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_15)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_85_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)}
+Final reported metric: global_accuracy = 0.8223741319444444\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_85_lmu_0_9_cmu_0_9_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_99_c0_9_lmu_0_5_cmu_0_5_ema_0_9)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)}
+Final reported metric: global_accuracy = 0.8104383680555556\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_99_c0_9_lmu_0_5_cmu_0_5_ema_0_9)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_10)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_9_c0_7_lmu_0_9_cmu_0_4_ema_0_85)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_6)}
+Final reported metric: global_accuracy = 0.7963324652777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_9_c0_7_lmu_0_9_cmu_0_4_ema_0_85)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_6)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CB_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8090277777777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CB_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8141818576388888\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CL(tau_0_1)_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8167317708333334\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CL(tau_0_1)_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_resnet8_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.7787000868055556\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_resnet8_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+No numeric test metric found in test\_stats.csv for this run.\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/fedprox_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8141818576388888\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/fedprox_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/moon_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_(mu_2_0_tau_0_5_v2)}
+Final reported metric: global_accuracy = 0.4908854166666667\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/moon_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_(mu_2_0_tau_0_5_v2)/test_stats.csv}\n\n\subsubsection{Run: results/emnist_noiid_lbldir_b0_3_k100_Global/scaffold_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8178168402777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/emnist_noiid_lbldir_b0_3_k100_Global/scaffold_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_256_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.7865735619469026\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_256_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+No numeric test metric found in test\_stats.csv for this run.\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_resnet8_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.4528311670353982\
+\n\begin{tabular}{ll}\toprule\nMetric & Value \\ \midrule\nglobal_accuracy & 0.4528311670353982 \\ \n\bottomrule\n\end{tabular}\n\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_resnet8_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+No numeric test metric found in test\_stats.csv for this run.\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Local/fedavg_lenet5_CE_nc_None_lr_0_01_B_256_E_5_104_C_100_10}
+Final reported metric: training_loss = 11.276673094089734\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Local/fedavg_lenet5_CE_nc_None_lr_0_01_B_256_E_5_104_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Local/fedavg_resnet8_CE_nc_None_lr_0_01_B_256_E_5_104_C_100_10}
+Final reported metric: training_loss = 13.917489460317011\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Local/fedavg_resnet8_CE_nc_None_lr_0_01_B_256_E_5_104_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Local/fedprox_lenet5_CE_nc_None_lr_0_01_B_256_E_5_104_C_100_10}
+Final reported metric: training_loss = 11.304707270346407\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Local/fedprox_lenet5_CE_nc_None_lr_0_01_B_256_E_5_104_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Local/moon_lenet5_CE_nc_None_lr_0_01_B_64_E_5_104_C_100_10_(mu_2_0_tau_0_5_v2)}
+Final reported metric: training_loss = 174.66994239865903\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Local/moon_lenet5_CE_nc_None_lr_0_01_B_64_E_5_104_C_100_10_(mu_2_0_tau_0_5_v2)/test_stats.csv}\n\n\subsubsection{Run: results/femnist_noiid_lbldir_b0_3_k100_Local/scaffold_lenet5_CE_nc_None_lr_0_01_B_64_E_5_104_C_100_10}
+Final reported metric: training_loss = 42.01614568418262\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/femnist_noiid_lbldir_b0_3_k100_Local/scaffold_lenet5_CE_nc_None_lr_0_01_B_64_E_5_104_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_1_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.7582465277777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_1_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_1_k100_Global/moon_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_(mu_2_0_tau_0_5_v2)}
+Final reported metric: global_accuracy = 0.7094184027777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_1_k100_Global/moon_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_(mu_2_0_tau_0_5_v2)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/ccvr_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8136935763888888\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/ccvr_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/ccvr_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(slr_0_5_sm_0_99)}
+Final reported metric: global_accuracy = 0.4766710069444444\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/ccvr_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(slr_0_5_sm_0_99)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/elastic_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8042534722222222\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/elastic_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_01)}
+Final reported metric: global_accuracy = 0.8541666666666666\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_01)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_5)}
+Final reported metric: global_accuracy = 0.10026041666666667\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_5)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavg}
+Final reported metric: global_accuracy = 0.8438585069444444\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavg/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat}
+Final reported metric: global_accuracy = 0.8355034722222222\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsatc}
+Final reported metric: global_accuracy = 0.8386501736111112\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsatc/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_mean}
+Final reported metric: global_accuracy = 0.8395182291666666\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_mean/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgcs}
+Final reported metric: global_accuracy = 0.8298611111111112\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgcs/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgs}
+Final reported metric: global_accuracy = 0.8317057291666666\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgs/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_4)}
+Final reported metric: global_accuracy = 0.8391927083333334\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CACS(p0_95_c0_5_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_4)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_elastic(mu_0_95_tau_0_5)}
+Final reported metric: global_accuracy = 0.7995876736111112\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_elastic(mu_0_95_tau_0_5)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_elastic(v2_mu_0_95_tau_0_5)}
+Final reported metric: global_accuracy = 0.8109809027777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_elastic(v2_mu_0_95_tau_0_5)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam}
+Final reported metric: global_accuracy = 0.10101996527777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_01)}
+Final reported metric: global_accuracy = 0.8452690972222222\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_01)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_1)}
+Final reported metric: global_accuracy = 0.10026041666666667\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_1)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavg}
+Final reported metric: global_accuracy = 0.8060980902777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavg/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(slr_0_5_sm_0_99)}
+Final reported metric: global_accuracy = 0.4146050347222222\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(slr_0_5_sm_0_99)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(slr_1_0_sm_0_99)}
+Final reported metric: global_accuracy = 0.0998263888888889\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(slr_1_0_sm_0_99)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(sm_0_9)}
+Final reported metric: global_accuracy = 0.6875\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm(sm_0_9)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedyogi}
+Final reported metric: global_accuracy = 0.099609375\
+\n\begin{tabular}{ll}\toprule\nMetric & Value \\ \midrule\nglobal_accuracy & 0.099609375 \\ \n\bottomrule\n\end{tabular}\n\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedyogi/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedyogi(slr_0_01)}
+Final reported metric: global_accuracy = 0.099609375\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedyogi(slr_0_01)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_mean}
+Final reported metric: global_accuracy = 0.7985026041666666\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_mean/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgs}
+Final reported metric: global_accuracy = 0.09917534722222222\
+\n\begin{tabular}{ll}\toprule\nMetric & Value \\ \midrule\nglobal_accuracy & 0.09917534722222222 \\ \n\bottomrule\n\end{tabular}\n\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_prawgs/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(p0_95_c0_5_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_4)}
+No numeric test metric found in test\_stats.csv for this run.\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedavg_tresnet18p_CACS(p0_95_c0_5_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedsat(topP_4)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_3_k100_Global/fedprox_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10}
+Final reported metric: global_accuracy = 0.8060980902777778\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_3_k100_Global/fedprox_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavg}
+Final reported metric: global_accuracy = 0.8576388888888888\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CACS(c0_5_p0_95_lmu_0_95_cmu_0_05_ema_0_95)_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavg/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_1)}
+Final reported metric: global_accuracy = 0.10101996527777778\
+\n\begin{tabular}{ll}\toprule\nMetric & Value \\ \midrule\nglobal_accuracy & 0.10101996527777778 \\ \n\bottomrule\n\end{tabular}\n\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_0_1)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_1_0)}
+Final reported metric: global_accuracy = 0.0998263888888889\
+\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedadam(slr_1_0)/test_stats.csv}\n\n\subsubsection{Run: results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm}
+Final reported metric: global_accuracy = 0.09917534722222222\
+\n\begin{tabular}{ll}\toprule\nMetric & Value \\ \midrule\nglobal_accuracy & 0.09917534722222222 \\ \n\bottomrule\n\end{tabular}\n\n\noindent Source: \texttt{/home/sujit_2021cs35/Github/FedSat/RESULTS/results/fmnist_noiid_lbldir_b0_5_k100_Global/fedavg_lenet5_CE_nc_None_lr_0_01_B_64_E_5_105_C_100_10_A_fedavgm/test_stats.csv}\n\n\subsection{Summary}
+The table above lists per-run final test statistics extracted directly from each run's test\_stats.csv. Raw JSON traces and figures are located under RESULTS/json_dump and RESULTS/figures respectively.

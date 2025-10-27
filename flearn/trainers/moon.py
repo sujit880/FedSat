@@ -15,8 +15,15 @@ class FedMOONServer(BaseServer):
     def __init__(self, params):
         print('Using MOON to Train')
         
-        MOON_ARGS["mu"] = 5.0 #MOON_MU[self.dataset]
+        MOON_ARGS["mu"] = 2.0 #MOON_MU[self.dataset]
         MOON_ARGS["tau"] = 0.5
+        MOON_ARGS["prev_model_version"] = input("Enter previous model version (v1 or v2): ")
+        if MOON_ARGS["prev_model_version"] == "v1": 
+            print("Upgrading from v1: Previous model is the client's last model")
+        elif MOON_ARGS["prev_model_version"] == "v2": 
+            print("Upgrading from v2: Previous model is the global model")
+        else: 
+            print("Invalid input. Defaulting to v1.")
         params.update(MOON_ARGS)
         super().__init__(params)
         self.clients: list[MOONClient] = self.clients
@@ -27,7 +34,8 @@ class FedMOONServer(BaseServer):
         for client in self.clients:
             MOON_ARGS["prev_model"] = deepcopy(self.client_model)
             client.init_client_specific_params(**MOON_ARGS)
-                 
+            client.prev_model_version = self.prev_model_version
+                             
         # self.robust_test = True
         # self.global_test = True
         
