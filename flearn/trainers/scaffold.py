@@ -12,7 +12,7 @@ from flearn.utils.constants import CLASSES
 from flearn.trainers.server import BaseServer
 class SCAFFOLDServer(BaseServer):
     def __init__(self, params):
-        print('Using MOON to Train')
+        print('Using SCAFFOLD to Train')
 
         params.update(SCAFFOLD_ARGS)
         super().__init__(params)
@@ -20,7 +20,13 @@ class SCAFFOLDServer(BaseServer):
         self.global_lr = 1.0
         self.num_classes = CLASSES[self.dataset]                 
         self.global_params_dict = OrderedDict({k: v.clone().detach() for (k, v) in self.client_model.named_parameters()})
-        self.c_global = OrderedDict((key, torch.zeros_like(value, requires_grad=False, device="cpu")) for (key, value) in self.client_model.named_parameters())
+        # Initialize c_global on the same device as model parameters to avoid
+        # repeated device transfers during training.
+        try:
+            model_device = next(self.client_model.named_parameters())[1].device
+        except StopIteration:
+            model_device = torch.device("cpu")
+        self.c_global = OrderedDict((key, torch.zeros_like(value, requires_grad=False, device=model_device)) for (key, value) in self.client_model.named_parameters())
         for params in self.global_params_dict.values():
             params.requires_grad = False
 
@@ -91,6 +97,13 @@ class SCAFFOLDServer(BaseServer):
                 mean_value = torch.sum(1/len(y_delta) * torch.stack(y_delta, dim=-1), dim=-1)
             param.data += (self.global_lr * mean_value.data).to(param.data.dtype)
         # update global control
+        
+        # update global control
         for k, c_delta in zip(self.c_global.keys(), zip(*c_delta_cache)):
             self.c_global[k] = self.c_global[k] + (torch.stack(c_delta, dim=-1).sum(dim=-1) / len(self.clients)).to(self.c_global[k].data.dtype)
+        # Average c_delta over participating clients in this round (not total clients)
+        # n_participants = max(1, len(self.clients))
+        # for k, c_delta in zip(self.c_global.keys(), zip(*c_delta_cache)):
+        #     avg_delta = (torch.stack(c_delta, dim=-1).sum(dim=-1) / n_participants).to(self.c_global[k].data.dtype)
+        #     self.c_global[k] = self.c_global[k] + avg_delta
         self.client_model.load_state_dict(self.global_params_dict, strict=False)

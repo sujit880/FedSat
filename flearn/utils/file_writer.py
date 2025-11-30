@@ -1,6 +1,7 @@
 import os
 import json
 from typing import Any
+from builtins import open as builtin_open
 from flearn.config.config_paths import RESULTS_DIR
 import csv
 
@@ -53,7 +54,7 @@ class FileWriter:
 
         self.metadata.update(metadata)
 
-        with open(self.path + "metadata.json", "w") as file:
+        with builtin_open(self.path + "metadata.json", "w") as file:
             json.dump(self.metadata, file)
 
         self.csv_buffers: dict[str, list[list[Any]]] = {}
@@ -65,7 +66,7 @@ class FileWriter:
             if len(data) == 0:
                 continue
 
-            with open(self.path + filename, "a", newline="") as csvfile:
+            with builtin_open(self.path + filename, "a", newline="") as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerows(data)
 
@@ -73,7 +74,7 @@ class FileWriter:
             self.buffer_size = 0
 
     def add_csv_file(self, filename: str, headers: list[str]) -> None:
-        with open(self.path + filename, "w", newline="") as csvfile:
+        with builtin_open(self.path + filename, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(headers)
 

@@ -1,0 +1,61 @@
+\subsection{Ablation Study}
+
+We conduct a systematic ablation study to disentangle the contributions of FedSat's two key components under severe non-IID conditions (Dirichlet $\beta{=}0.3$, 100 clients):
+
+\paragraph{Component Analysis.}
+Table~\ref{tab:ablation} quantifies the incremental benefit of each component across three datasets.
+
+\begin{table*}[t]
+\centering
+\caption{Ablation study showing incremental contributions of CACS (client-side confusion calibration) and FedSat (server-side top-$p$ aggregation). All experiments use Dirichlet $\beta{=}0.3$ with 100 clients, batch size 64, and 5 local epochs.}
+\label{tab:ablation}
+\small
+\begin{tabular}{llccccc}
+\toprule
+\multirow{2}{*}{\textbf{Dataset}} & \multirow{2}{*}{\textbf{Method}} & \textbf{CACS} & \textbf{FedSat} & \textbf{Accuracy} & \textbf{$\Delta$ vs CE} & \textbf{$\Delta$ vs CACS} \\
+& & \textbf{Loss} & \textbf{Agg.} & (\%) & (abs. \%) & (abs. \%) \\
+\midrule
+\multirow{3}{*}{CIFAR-10}   & FedAvg (CE)              & \xmark & \xmark & 60.47 & --     & -- \\
+                             & FedAvg + CACS            & \cmark & \xmark & 71.41 & +10.94 & -- \\
+                             & FedSat (CACS + top-$p$)  & \cmark & \cmark & \textbf{72.76} & +12.29 & +1.35 \\
+\midrule
+\multirow{3}{*}{FMNIST}     & FedAvg (CE)              & \xmark & \xmark & 80.61 & --     & -- \\
+                             & FedAvg + CACS            & \cmark & \xmark & \textbf{84.39} & +3.78  & -- \\
+                             & FedSat (CACS + top-$p$)  & \cmark & \cmark & 83.92 & +3.31  & -0.47 \\
+\midrule
+\multirow{3}{*}{CIFAR-100}  & FedAvg (CE)              & \xmark & \xmark & 49.69 & --     & -- \\
+                             & FedAvg + CACS            & \cmark & \xmark & 50.91 & +1.22  & -- \\
+                             & FedSat (CACS + top-$p$)  & \cmark & \cmark & \textbf{51.29} & +1.60  & +0.38 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\paragraph{Findings.}
+(1) \textbf{CACS is the primary contributor}, especially on CIFAR-10 where confusion among similar classes is high (+10.94\% absolute gain). 
+(2) \textbf{FedSat provides complementary gains} when the number of struggling classes is moderate (CIFAR-10: +1.35\%, CIFAR-100: +0.38\%). 
+(3) On FMNIST, CACS alone achieves the best result, suggesting that when local calibration is highly effective, aggressive top-$p$ selection may be unnecessary or counterproductive (-0.47\%).
+
+\paragraph{Top-$p$ Selection Sensitivity.}
+Table~\ref{tab:topp-sensitivity} examines how the choice of $p$ (number of prioritized classes) affects performance on CIFAR-10.
+
+\begin{table}[h]
+\centering
+\caption{Sensitivity to top-$p$ parameter on CIFAR-10 ($\beta{=}0.3$). Base method uses CACS loss with FedAvg aggregation as reference.}
+\label{tab:topp-sensitivity}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Top-$p$} & \textbf{Accuracy (\%)} & \textbf{$\Delta$ vs CACS} & \textbf{$\Delta$ vs CE} \\
+\midrule
+-- (CACS only)   & 71.41              & --      & +10.94 \\
+\midrule
+$p=1$            & 73.38              & +1.97   & +12.91 \\
+$p=2$            & \textbf{73.82}     & +2.41   & +13.35 \\
+$p=4$            & 72.76              & +1.35   & +12.29 \\
+$p=5$            & 73.37              & +1.96   & +12.90 \\
+$p=10$           & 71.95              & +0.54   & +11.48 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Observations.}
+The optimal $p$ value is dataset- and heterogeneity-dependent. For CIFAR-10 with 10 classes, $p{=}2$ yields the highest accuracy (73.82\%), prioritizing the two most confused classes. Even aggressive choices ($p{=}1$) improve over CACS-only (+1.97\%), demonstrating robustness. However, overly conservative selections ($p{=}10$, entire class set) dilute the effect (+0.54\%), approaching uniform aggregation. This validates our hypothesis that \textbf{selective emphasis on globally struggling classes complements local confusion calibration}.

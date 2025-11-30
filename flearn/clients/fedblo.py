@@ -165,8 +165,7 @@ class FedBLOClient(BaseClient):
                 z = features + p                                               # (B, D)
 
                 logits   = self.model.classifier(z)                     # used for CE and InfoNCE
-                # logits_s = self.model.classifier(features.clone().detach())            # detached to keep KD target stable (v4)
-                logits_s = self.model.classifier(features) #(v41)
+                logits_s = self.model.classifier(features.clone().detach())            # detached to keep KD target stable (v4)
                 # --- KD: make shared s predictive like personalized z --- 
                 kdT = self.kd_T
                 kd = F.kl_div(

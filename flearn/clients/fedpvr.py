@@ -80,7 +80,9 @@ class SCAFFOLDClient(BaseClient):
                 ):
                     if k.startswith('fc.') or k.startswith('resnet.fc.'):
                         if param.grad is not None:
-                            param.grad.data += (G - c_i).to(self.device) if G.device !=self.device else (G - c_i)
+                            # follow SCAFFOLD: add (c_i - c) correction to gradient
+                            corr = (c_i - G).to(self.device) if G.device != self.device else (c_i - G)
+                            param.grad.data += corr
                 self.optimizer.step()
                 train_sample_size += len(labels)
 

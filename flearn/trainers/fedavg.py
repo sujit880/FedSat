@@ -7,6 +7,7 @@ from collections import OrderedDict
 from flearn.clients.fedavg import FedAvgClient
 from flearn.utils.constants import CLASSES
 from flearn.utils.aggregator import Aggregator
+from copy import deepcopy
 
 TOP_P = {
     "cifar10": 4, # 1, 3, 4, 5, 10
@@ -24,7 +25,7 @@ def get_lr_for_dataset(agg_method, dataset):
     # You can customize learning rates per aggregation method and dataset here
     dataset_lr = {
         "cifar10": {"fedadam": 1e-3, "fedavgm": 0.5},
-        "cifar": {"fedadam": 1e-3, "fedavgm": 0.5},
+        "cifar": {"fedadam": 1e-2, "fedavgm": 0.5},
         "cifar100": {"fedadam": 5e-4, "fedavgm": 0.5},
         "mnist": {"fedadam": 1e-2, "fedavgm": 1.0},
         "fmnist": {"fedadam": 1e-2, "fedavgm": 0.5},
@@ -40,13 +41,14 @@ class FedAvgServer(BaseServer):
         params["server_learning_rate"] = get_lr_for_dataset(params["agg"], params["dataset"]) if params["agg"] in {"fedadam", "fedavgm"} else 1.0
         params["server_momentum"] = 0.99
         params["top_p"] = TOP_P[params['dataset']] # int(CLASSES[params['dataset']]/2.5) # TOP_P[params['dataset']]
+        params.update({"use_prev_global_model":  False})
         super().__init__(params)
         self.num_classes = CLASSES[self.dataset]
         for client in self.clients:
             client.num_classes = self.num_classes
 
         # choose aggregation method
-        if self.agg is not None:
+        if self.agg is not None and not self.agg=="drl":
             self.aggregator = Aggregator(method=self.agg, model=self.client_model, lr=self.server_learning_rate, mu=self.server_momentum, top_p=self.top_p)
         # Check and print overall dataset stats (train + val) across all clients
         if hasattr(self, "clients") and self.clients:
@@ -104,6 +106,7 @@ class FedAvgServer(BaseServer):
             )  # uniform sampling
 
             csolns = []  # buffer for receiving client solutions
+            client_solutions_dict = {}
 
             for _, c in enumerate(selected_clients):  # simply drop the slow devices
                 # communicate the latest model
@@ -127,11 +130,22 @@ class FedAvgServer(BaseServer):
                     assert (self.loss == "CACS" or self.loss == "CALC"), f"Client criterion must be CACS or CALC for {self.agg} aggregation."
                     struggling_score = c.criterion.compute_struggler_scores()
                     csolns.append((soln[0], (soln[1], struggling_score)))  # (weight, (soln[1], struggling_score))
+                elif self.agg == "drl": 
+                    client_solutions_dict[c.id] = soln[1]
                 else:
                     csolns.append(soln)
             # update models
-            if self.agg is not None:
+            if self.agg is not None and not self.agg=="drl":
                 self.latest_model = self.aggregator.aggregate(csolns, self.latest_model)
+            if self.agg=="drl":
+                self.round = i
+                if self.use_prev_global_model:
+                    client_solutions_dict[len(self.clients)+1] = deepcopy(self.latest_model)
+                self.latest_model = self.drl_aggregate(client_solutions_dict)
+                # print(f"Last accuracy: {self.last_acc}")
+                # If RL aggregator exposes per-client weights, store them for next round
+                if hasattr(self, 'rl_client_weights') and isinstance(self.rl_client_weights, dict):
+                    self.last_client_weights = {k: float(v) for k, v in self.rl_client_weights.items()}
             else:   self.latest_model = self.aggregate(csolns)
             self.client_model.load_state_dict(self.latest_model, strict=False)
 

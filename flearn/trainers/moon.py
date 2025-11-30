@@ -15,7 +15,7 @@ class FedMOONServer(BaseServer):
     def __init__(self, params):
         print('Using MOON to Train')
         
-        MOON_ARGS["mu"] = 2.0 #MOON_MU[self.dataset]
+        MOON_ARGS["mu"] = 5.0 #MOON_MU[self.dataset]
         MOON_ARGS["tau"] = 0.5
         MOON_ARGS["prev_model_version"] = input("Enter previous model version (v1 or v2): ")
         if MOON_ARGS["prev_model_version"] == "v1": 

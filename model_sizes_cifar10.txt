@@ -1,0 +1,28 @@
+Model Size Measurements for cifar10
+================================================================================
+
+Model Name                     Parameters       Size (MB)
+--------------------------------------------------------------------------------
+mlp                               251,310            0.96
+resnet18                            Error           Error
+  Error: 'cifar10'
+tresnet18p                          Error           Error
+  Error: 'cifar10'
+tresnet34p                          Error           Error
+  Error: 'cifar10'
+tresnet50p                          Error           Error
+  Error: 'cifar10'
+tresnet101p                         Error           Error
+  Error: 'cifar10'
+tresnet18                           Error           Error
+  Error: 'cifar10'
+tresnet34                           Error           Error
+  Error: 'cifar10'
+tresnet50                           Error           Error
+  Error: 'cifar10'
+tresnet101                          Error           Error
+  Error: 'cifar10'
+resnet8                             Error           Error
+  Error: 'cifar10'
+lenet5                             62,006            0.24
+================================================================================

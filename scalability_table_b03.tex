@@ -1,0 +1,86 @@
+
+% Scalability table for FMNIST (β = 0.3)
+\begin{table}[H]
+\centering
+\caption{Scalability analysis: Maximum accuracy achieved with varying number of clients (FMNIST, β=0.3)}
+\begin{tabular}{lcccccc}
+\toprule
+\multirow{2}{*}{Method} & \multicolumn{2}{c}{$k=20$} & \multicolumn{2}{c}{$k=50$} & \multicolumn{2}{c}{$k=100$} \\
+\cmidrule(lr){2-7}
+ & Acc. & Round & Acc. & Round & Acc. & Round \\
+\midrule
+FedAvg+CACS & -- & -- & -- & -- & 83.9% & 101 \\
+FedAvg+CALC & -- & -- & -- & -- & 86.3% & 102 \\
+FedAvg+CE & -- & -- & -- & -- & 9.9% & 0 \\
+FedSat & -- & -- & -- & -- & 84.7% & 104 \\
+ccvr & -- & -- & -- & -- & 74.8% & 43 \\
+ditto & -- & -- & -- & -- & 83.5% & 83 \\
+elastic & -- & -- & -- & -- & 82.1% & 103 \\
+fedavg & -- & -- & -- & -- & 81.0% & 103 \\
+fedfa & -- & -- & -- & -- & 83.3% & 103 \\
+fedprox & -- & -- & -- & -- & 82.5% & 83 \\
+fedpvr & -- & -- & -- & -- & 81.3% & 103 \\
+fedsam & -- & -- & -- & -- & 82.0% & 103 \\
+moon & -- & -- & -- & -- & 75.2% & 82 \\
+scaffold & -- & -- & -- & -- & 83.3% & 103 \\
+\bottomrule
+\end{tabular}
+\label{tab:scalability_fmnist_b03}
+\end{table}
+
+% Scalability table for CIFAR (β = 0.3)
+\begin{table}[H]
+\centering
+\caption{Scalability analysis: Maximum accuracy achieved with varying number of clients (CIFAR, β=0.3)}
+\begin{tabular}{lcccccc}
+\toprule
+\multirow{2}{*}{Method} & \multicolumn{2}{c}{$k=20$} & \multicolumn{2}{c}{$k=50$} & \multicolumn{2}{c}{$k=100$} \\
+\cmidrule(lr){2-7}
+ & Acc. & Round & Acc. & Round & Acc. & Round \\
+\midrule
+FedAvg+CACS & -- & -- & -- & -- & 72.1% & 52 \\
+FedAvg+CALC & 79.3% & 28 & 76.0% & 56 & 74.4% & 93 \\
+FedAvg+CE & 79.0% & 83 & 74.2% & 94 & 64.8% & 68 \\
+FedSat & 78.6% & 94 & 75.5% & 88 & 73.6% & 94 \\
+ccvr & -- & -- & -- & -- & 67.3% & 64 \\
+ditto & -- & -- & -- & -- & 40.7% & 99 \\
+fedadagrad & -- & -- & 18.2% & 1 & -- & -- \\
+fedadam & -- & -- & 18.6% & 3 & 57.9% & 97 \\
+fedavg & 77.1% & 56 & 71.8% & 33 & 57.9% & 64 \\
+fedfa & 78.6% & 21 & -- & -- & 63.5% & 95 \\
+fedks & 10.5% & 95 & -- & -- & -- & -- \\
+fedntd & -- & -- & -- & -- & 69.4% & 68 \\
+fedrs & 78.9% & 35 & -- & -- & -- & -- \\
+fedsam & -- & -- & -- & -- & 54.1% & 99 \\
+fedyogi & -- & -- & 18.8% & 3 & -- & -- \\
+scaffold & 75.2% & 49 & -- & -- & 26.4% & 1 \\
+\bottomrule
+\end{tabular}
+\label{tab:scalability_cifar_b03}
+\end{table}
+
+% Scalability table for CIFAR100 (β = 0.3)
+\begin{table}[H]
+\centering
+\caption{Scalability analysis: Maximum accuracy achieved with varying number of clients (CIFAR100, β=0.3)}
+\begin{tabular}{lcccccc}
+\toprule
+\multirow{2}{*}{Method} & \multicolumn{2}{c}{$k=20$} & \multicolumn{2}{c}{$k=50$} & \multicolumn{2}{c}{$k=100$} \\
+\cmidrule(lr){2-7}
+ & Acc. & Round & Acc. & Round & Acc. & Round \\
+\midrule
+FedAvg+CACS & -- & -- & -- & -- & 51.1% & 89 \\
+FedAvg+CALC & -- & -- & -- & -- & 15.0% & 35 \\
+FedAvg+CE & -- & -- & -- & -- & 49.9% & 89 \\
+FedSat & -- & -- & -- & -- & 51.1% & 88 \\
+ccvr & -- & -- & -- & -- & 49.4% & 91 \\
+ditto & -- & -- & -- & -- & 50.0% & 100 \\
+fedavg & -- & -- & -- & -- & 49.3% & 104 \\
+fedfa & -- & -- & -- & -- & 49.3% & 104 \\
+fedntd & -- & -- & -- & -- & 50.8% & 97 \\
+fedrs & -- & -- & -- & -- & 48.6% & 98 \\
+fedsam & -- & -- & -- & -- & 47.0% & 104 \\
+\bottomrule
+\end{tabular}
+\label{tab:scalability_cifar100_b03}
+\end{table}

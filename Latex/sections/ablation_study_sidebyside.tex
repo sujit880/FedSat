@@ -1,0 +1,62 @@
+% Alternative ablation table with side-by-side component comparison
+
+\begin{table*}[t]
+\centering
+\caption{Ablation study: Systematic evaluation of FedSat components under severe label skew (Dirichlet $\beta{=}0.3$, 100 clients). Left: component-wise contribution. Right: top-$p$ sensitivity on CIFAR-10.}
+\label{tab:ablation-sidebyside}
+\begin{minipage}{0.55\textwidth}
+\centering
+\subcaption{Component Analysis}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{Components}} & \multicolumn{2}{c}{\textbf{Accuracy (\%)}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{Dataset} & CACS & FedSat & Value & $\Delta$ \\
+\midrule
+\multirow{3}{*}{CIFAR-10} 
+  & \xmark & \xmark & 60.47 & -- \\
+  & \cmark & \xmark & 71.41 & +10.94 \\
+  & \cmark & \cmark & \textbf{72.76} & +12.29 \\
+\midrule
+\multirow{3}{*}{FMNIST} 
+  & \xmark & \xmark & 80.61 & -- \\
+  & \cmark & \xmark & \textbf{84.39} & +3.78 \\
+  & \cmark & \cmark & 83.92 & +3.31 \\
+\midrule
+\multirow{3}{*}{CIFAR-100} 
+  & \xmark & \xmark & 49.69 & -- \\
+  & \cmark & \xmark & 50.91 & +1.22 \\
+  & \cmark & \cmark & \textbf{51.29} & +1.60 \\
+\bottomrule
+\end{tabular}
+\end{minipage}%
+\hfill
+\begin{minipage}{0.42\textwidth}
+\centering
+\subcaption{Top-$p$ Parameter Sensitivity}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Top-$p$} & \textbf{Acc. (\%)} & \textbf{$\Delta$} \\
+\midrule
+-- (baseline)  & 71.41 & -- \\
+\midrule
+$p=1$          & 73.38 & +1.97 \\
+$p=2$          & \textbf{73.82} & +2.41 \\
+$p=4$          & 72.76 & +1.35 \\
+$p=5$          & 73.37 & +1.96 \\
+$p=10$         & 71.95 & +0.54 \\
+\bottomrule
+\end{tabular}
+\vspace{2mm}
+
+\small
+\textit{Baseline: CACS with FedAvg aggregation on CIFAR-10.}
+\end{minipage}
+\end{table*}
+
+\paragraph{Analysis.}
+\textbf{Left table:} CACS (confusion-calibrated local loss) delivers the majority of gains, particularly on CIFAR-10 where inter-class confusion is high (+10.94\%). FedSat's top-$p$ aggregation provides an additional +1.35\% by prioritizing struggling classes at the server. On FMNIST, CACS alone peaks at 84.39\%, suggesting effective local calibration may reduce the need for aggressive server-side selection.
+
+\textbf{Right table:} Optimal $p$ values lie in $\{2, 4, 5\}$ for 10-class CIFAR-10, with peak performance at $p{=}2$ (73.82\%). This suggests \textit{focusing on 1--2 most confused classes} is sufficient. Too small ($p{=}1$) still improves (+1.97\%), while too large ($p{=}10$) dilutes the effect (+0.54\%).

@@ -41,7 +41,8 @@ class FedAvgClient(BaseClient):
                 loss = self.criterion(outputs, labels)
                 fed_prox_reg = 0.0
                 for w, w_t in zip(self.model.parameters(), global_model.parameters()):
-                    param_diff = w.data - w_t.data
+                    # param_diff = w.data - w_t.data
+                    param_diff = w - w_t
                     fed_prox_reg += (self.mu / 2) * torch.norm(param_diff ** 2)
                 loss += fed_prox_reg
                 loss.backward()

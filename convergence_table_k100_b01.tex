@@ -1,0 +1,78 @@
+
+% Table for FMNIST (k=100, β = 0.1)
+\begin{table}[H]
+\centering
+\caption{Convergence rounds for FMNIST (100 clients, β=0.1)}
+\begin{tabular}{llll}
+\toprule
+Method & 40\% & 60\% & 80\% \\
+\midrule
+FedAvg+CACS & 6 & 10 & 68 \\
+FedAvg+CALC & 6 & 10 & 58 \\
+FedAvg+CE & 11 & 24 & -- \\
+FedSat & 4 & 16 & 80 \\
+ccvr & 16 & 26 & -- \\
+ditto & 15 & 35 & -- \\
+fedavg & 18 & 37 & -- \\
+fedprox & 11 & 26 & -- \\
+fedpvr & 11 & 42 & -- \\
+moon & 10 & 42 & -- \\
+scaffold & 11 & 26 & -- \\
+\bottomrule
+\end{tabular}
+\label{tab:convergence_fmnist_k100_b01}
+\end{table}
+
+% Table for CIFAR (k=100, β = 0.1)
+\begin{table}[H]
+\centering
+\caption{Convergence rounds for CIFAR (100 clients, β=0.1)}
+\begin{tabular}{llll}
+\toprule
+Method & 20\% & 40\% & 60\% \\
+\midrule
+FedAvg+CACS & 2 & 16 & -- \\
+FedAvg+CALC & 1 & 5 & 49 \\
+FedAvg+CE & -- & -- & -- \\
+FedSat & 1 & 8 & 25 \\
+ccvr & 2 & -- & -- \\
+ditto & -- & -- & -- \\
+elastic & 77 & -- & -- \\
+fedadagrad & -- & -- & -- \\
+fedadam & -- & -- & -- \\
+fedavg & 69 & -- & -- \\
+fedfa & 57 & -- & -- \\
+fedntd & 35 & -- & -- \\
+fedprox & 28 & -- & -- \\
+fedpvr & 2 & -- & -- \\
+fedsam & 75 & -- & -- \\
+fedyogi & -- & -- & -- \\
+floco & 3 & 21 & -- \\
+moon & -- & -- & -- \\
+scaffold & 2 & -- & -- \\
+\bottomrule
+\end{tabular}
+\label{tab:convergence_cifar_k100_b01}
+\end{table}
+
+% Table for CIFAR100 (k=100, β = 0.1)
+\begin{table}[H]
+\centering
+\caption{Convergence rounds for CIFAR100 (100 clients, β=0.1)}
+\begin{tabular}{llll}
+\toprule
+Method & 20\% & 30\% & 40\% \\
+\midrule
+FedAvg+CALC & 3 & 6 & 19 \\
+FedAvg+CE & 7 & 23 & 44 \\
+FedSat & 3 & 7 & 16 \\
+ditto & 16 & 48 & -- \\
+fedadam & -- & -- & -- \\
+fedavg & 7 & 22 & 56 \\
+fedfa & 13 & 48 & -- \\
+fedntd & 4 & 11 & 27 \\
+fedsam & 16 & 48 & -- \\
+\bottomrule
+\end{tabular}
+\label{tab:convergence_cifar100_k100_b01}
+\end{table}

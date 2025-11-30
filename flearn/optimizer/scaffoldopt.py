@@ -23,7 +23,9 @@ class ScaffoldOptimizer(Optimizer):
             for p, c, ci in zip(group['params'], server_controls.values(), client_controls.values()):
                 if p.grad is None:
                     continue
-                dp = p.grad.data + c.data - ci.data
+                # Use client_control - server_control (ci - c) as correction per SCAFFOLD.
+                # Previous order (c - ci) applies server-client which is the opposite sign.
+                dp = p.grad.data + ci.data - c.data
                 p.data = p.data - dp.data * group['lr']
 
         return loss

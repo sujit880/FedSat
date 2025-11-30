@@ -14,6 +14,10 @@ PeFLL_ARGS: dict[str, Any] = {
 MOON_ARGS: dict[str, Any] = {
 }
 
+FEDMRL_ARGS: dict[str, Any] = {
+    "adv_gain": 0.5,
+}
+
 SCAFFOLD_ARGS: dict[str, Any] = {
 }
 

@@ -1,0 +1,42 @@
+% Compact ablation study table for space-constrained venues
+
+\begin{table}[t]
+\centering
+\caption{Ablation study on Dirichlet $\beta{=}0.3$ (100 clients). $\Delta$ shows gain over CE baseline.}
+\label{tab:ablation-compact}
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{CIFAR-10} & \textbf{FMNIST} & \textbf{CIFAR-100} \\
+\midrule
+CE (baseline)    & 60.47          & 80.61        & 49.69 \\
++ CACS           & 71.41 (\textit{+10.94})  & 84.39 (\textit{+3.78})   & 50.91 (\textit{+1.22}) \\
++ CACS + FedSat  & \textbf{72.76} (\textit{+12.29})  & 83.92 (\textit{+3.31})   & \textbf{51.29} (\textit{+1.60}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Component contributions:} CACS provides the primary gain through client-side confusion calibration (+10.94\% on CIFAR-10), while FedSat's server-side top-$p$ aggregation adds +1.35\% by prioritizing globally struggling classes.
+
+\begin{table}[t]
+\centering
+\caption{Top-$p$ sensitivity on CIFAR-10 ($\beta{=}0.3$). Base: CACS with FedAvg.}
+\label{tab:topp-compact}
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Top-$p$} & \textbf{Accuracy} & \textbf{$\Delta$ vs CACS} \\
+\midrule
+-- (CACS)  & 71.41\%    & -- \\
+$p=1$      & 73.38\%    & +1.97 \\
+$p=2$      & \textbf{73.82\%}    & +2.41 \\
+$p=4$      & 72.76\%    & +1.35 \\
+$p=5$      & 73.37\%    & +1.96 \\
+$p=10$     & 71.95\%    & +0.54 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Optimal range:} $p \in \{2,4,5\}$ balances between focused prioritization and model stability. Peak at $p{=}2$ suggests emphasizing 1--2 most confused classes is optimal for 10-class datasets.

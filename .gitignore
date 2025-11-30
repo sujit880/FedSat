@@ -1,7 +1,6 @@
 *.csv  
 **/*.pyc
 **/*.json
-RESULTS/*.pdf
 **/*.ipynb
 **/*.pickle
 **/*.out

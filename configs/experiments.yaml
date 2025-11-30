@@ -1,0 +1,462 @@
+# FedSat Experiment Configurations
+# This file defines all experimental settings in a clean, readable format
+
+#############################################
+# GLOBAL SETTINGS
+#############################################
+
+global:
+  # Base directories
+  base_dir: "."
+  data_dir: "DATA"
+  results_dir: "RESULTS"
+  
+  # Hardware settings
+  gpu: true        # Boolean: True to use GPU
+  cuda: null       # null/None = use default (-1), or specify GPU device (0, 1, 2, etc.)
+  num_workers: 4
+  
+  # Random seeds for reproducibility
+  seeds: [42, 123, 456]
+  
+  # Default training parameters
+  defaults:
+    num_rounds: 105
+    clients_per_round: 10
+    num_epochs: 5
+    batch_size: 64
+    learning_rate: 0.01
+    num_clients: 50
+    weight_decay: 0.0001
+    momentum: 0.9
+    dataset_type: "noiid_lbldir"  # Default dataset type (main.py appends beta and num_clients)
+    n_class: null  # None for standard datasets, set integer for qty_lbl_imb (e.g., 2, 4)
+    beta: 0.3  # Default non-IID beta (overridden in experiments)
+
+#############################################
+# DATASETS
+#############################################
+# Note: dataset_type will be constructed by main.py based on beta and num_clients.
+# Format: noiid_lbldir_b{beta}_k{num_clients}
+# 
+# For special dataset types:
+#   - qty_lbl_imb: requires n_class parameter (number of classes per client)
+#     Format: qty_lbl_imb_b{beta}_k{num_clients}_fc_{n_class}
+#
+# Override dataset_type and n_class in experiment 'overrides' for special variants
+
+datasets:
+  cifar:
+    name: cifar
+    num_classes: 10
+    model: tresnet18p
+    input_size: 32
+    channels: 3
+    
+  cifar100:
+    name: cifar100
+    num_classes: 100
+    model: tresnet18p
+    input_size: 32
+    channels: 3
+    
+  fmnist:
+    name: fmnist
+    num_classes: 10
+    model: lenet5
+    input_size: 28
+    channels: 1
+    
+  emnist:
+    name: emnist
+    num_classes: 47
+    model: lenet5
+    input_size: 28
+    channels: 1
+    
+  mnist:
+    name: mnist
+    num_classes: 10
+    model: lenet5
+    input_size: 28
+    channels: 1
+
+#############################################
+# NON-IID CONFIGURATIONS
+#############################################
+
+non_iid:
+  iid:
+    beta: 1000.0
+    description: "IID (Independent and Identically Distributed)"
+    
+  mild:
+    beta: 0.5
+    description: "Mild non-IID"
+    
+  moderate:
+    beta: 0.3
+    description: "Moderate non-IID"
+    
+  severe:
+    beta: 0.1
+    description: "Severe non-IID"
+    
+  extreme:
+    beta: 0.05
+    description: "Extreme non-IID"
+
+#############################################
+# FEDERATED LEARNING METHODS
+#############################################
+
+methods:
+  # Standard Baselines
+  fedavg:
+    trainer: fedavg
+    category: baseline
+    description: "Standard Federated Averaging"
+    
+  fedprox:
+    trainer: fedprox
+    category: baseline
+    description: "FedProx with proximal term"
+    hyperparameters:
+      mu: 0.01
+    
+  scaffold:
+    trainer: scaffold
+    category: baseline
+    description: "SCAFFOLD variance reduction"
+    
+  moon:
+    trainer: moon
+    category: baseline
+    description: "MOON contrastive learning"
+  
+  # Adaptive Optimization Methods
+  fedadagrad:
+    trainer: fedadagrad
+    category: adaptive
+    description: "Adaptive optimization with Adagrad"
+    
+  fedyogi:
+    trainer: fedyogi
+    category: adaptive
+    description: "Adaptive optimization with Yogi (recommended)"
+    
+  fedadam:
+    trainer: fedadam
+    category: adaptive
+    description: "Adaptive optimization with Adam"
+  
+  # Class Imbalance Methods
+  fedrs:
+    trainer: fedrs
+    category: class_imbalance
+    description: "Restricted softmax for label distribution skew"
+    
+  fedsam:
+    trainer: fedsam
+    category: class_imbalance
+    description: "Sharpness-Aware Minimization"
+  
+  # Knowledge Distillation Methods
+  fedntd:
+    trainer: fedntd
+    category: distillation
+    description: "Not-True Distillation"
+    
+  fedproto:
+    trainer: fedproto
+    category: distillation
+    description: "Prototype-based federated learning"
+  
+  # Proposed Methods (FedSat uses FedAvg trainer with special aggregation)
+  fedsat:
+    trainer: fedavg
+    category: proposed
+    description: "FedSat: Struggle-aware targeted aggregation (requires CALC or CACS loss)"
+    hyperparameters:
+      agg: fedsat
+    recommended_losses: [CALC, CACS]
+    
+  fedsatc:
+    trainer: fedavg
+    category: proposed
+    description: "FedSatC: FedSat with class competence weighting (requires CACS loss)"
+    hyperparameters:
+      agg: fedsatc
+    recommended_losses: [CACS, CALC]
+
+#############################################
+# LOSS FUNCTIONS
+#############################################
+
+losses:
+  CE:
+    name: CE
+    description: "Cross Entropy"
+    
+  FL:
+    name: FL
+    description: "Focal Loss"
+    
+  CB:
+    name: CB
+    description: "Class Balanced Loss"
+    
+  CALC:
+    name: CALC
+    description: "Confusion-Aware Cost-Sensitive with Label Calibration"
+    
+  CACS:
+    name: CACS
+    description: "Confusion-Aware Cost-Sensitive"
+
+#############################################
+# EXPERIMENT SUITES
+#############################################
+# Each experiment suite can specify:
+#   - datasets: list of dataset keys
+#   - methods: list of method keys  
+#   - non_iid_levels: list of non-IID levels (beta values used for reference)
+#   - losses: list of loss functions (or use method_specific_loss)
+#   - seeds: list of random seeds
+#   - overrides: dict of parameter overrides (including dataset_type)
+#
+# dataset_type must match existing directories in DATA/{dataset}/
+# Override dataset_type in 'overrides' to use specific pre-generated datasets.
+
+experiments:
+  
+  # Quick validation test
+  quick_test:
+    description: "Fast validation that everything works"
+    datasets: [cifar10]
+    methods: [fedavg, fedyogi, fedsat]
+    non_iid_levels: [moderate]
+    seeds: [42]
+    overrides:
+      num_rounds: 10
+      num_epochs: 1
+    # FedSat should use CALC, others use CE
+    method_specific_loss:
+      fedavg: CE
+      fedyogi: CE
+      fedsat: CALC
+  
+  # Baseline comparison
+  baseline_comparison:
+    description: "Compare standard FL baseline methods"
+    datasets: [cifar10, cifar100, fmnist]
+    methods: [fedavg, fedprox, scaffold, moon]
+    non_iid_levels: [moderate, severe]
+    losses: [CE]
+    seeds: [42, 123]
+  
+  # Adaptive optimization study
+  adaptive_methods:
+    description: "Evaluate adaptive server-side optimization"
+    datasets: [cifar]
+    methods: [fedadagrad, fedyogi, fedadam]
+    # non_iid_levels: [severe]
+    losses: [CE]
+    seeds: [42]
+  
+  # Class imbalance study
+  class_imbalance:
+    description: "Methods for handling class imbalance"
+    datasets: [cifar10, cifar100]
+    methods: [fedavg, fedrs, fedsam, fedsat]
+    non_iid_levels: [severe, extreme]
+    seeds: [42, 123, 456]
+    # Each method with appropriate loss
+    method_specific_loss:
+      fedavg: CE
+      fedrs: CE
+      fedsam: CE
+      fedsat: CALC
+  
+  # Ablation study for your method
+  ablation_study:
+    description: "Analyze contribution of CALC loss and FedSat aggregation"
+    datasets: [cifar10, cifar100]
+    non_iid_levels: [moderate, severe]
+    seeds: [42, 123, 456]
+    # Special format for ablation
+    # Note: Cannot test FedSat aggregation alone (requires CALC/CACS loss)
+    configurations:
+      - name: "baseline"
+        method: fedavg
+        loss: CE
+        description: "Standard FedAvg baseline"
+        
+      - name: "calc_loss_only"
+        method: fedavg
+        loss: CALC
+        description: "CALC loss with standard aggregation"
+        
+      - name: "fedsat_full"
+        method: fedsat
+        loss: CALC
+        description: "Full FedSat (CALC loss + FedSat aggregation)"
+        
+      - name: "fedsatc_full"
+        method: fedsatc
+        loss: CACS
+        description: "Full FedSatC (CACS loss + FedSatC aggregation)"
+  
+  # Comprehensive comparison
+  full_comparison:
+    description: "Comprehensive evaluation of all methods"
+    datasets: [cifar10, cifar100, fmnist]
+    methods: [fedavg, fedyogi, fedrs, fedsam, fedntd, fedsat]
+    non_iid_levels: [mild, moderate, severe]
+    seeds: [42, 123, 456]
+    # Each method with appropriate loss
+    method_specific_loss:
+      fedavg: CE
+      fedyogi: CE
+      fedrs: CE
+      fedsam: CE
+      fedntd: CE
+      fedsat: CALC
+  
+  # Hyperparameter search
+  hyperparameter_search:
+    description: "Search for optimal hyperparameters"
+    datasets: [cifar10]
+    non_iid_levels: [moderate]
+    seeds: [42]
+    # Grid search configurations
+    grid:
+      fedyogi:
+        server_learning_rate: [0.001, 0.01, 0.1]
+        beta1: [0.9]
+        beta2: [0.99]
+      
+      fedsam:
+        rho: [0.01, 0.05, 0.1]
+      
+      fedsat:
+        loss: [CE, CALC, CACS]
+  
+  # Scalability study
+  scalability:
+    description: "Study impact of number of clients"
+    datasets: [cifar10]
+    methods: [fedavg, fedyogi, fedsat]
+    non_iid_levels: [moderate]
+    seeds: [42]
+    # Vary number of clients
+    client_configs:
+      - num_clients: 20
+        clients_per_round: 5
+      - num_clients: 50
+        clients_per_round: 10
+      - num_clients: 100
+        clients_per_round: 10
+      - num_clients: 200
+        clients_per_round: 20
+    # Each method with appropriate loss
+    method_specific_loss:
+      fedavg: CE
+      fedyogi: CE
+      fedsat: CALC
+  
+  # Communication efficiency
+  communication_study:
+    description: "Study communication rounds vs local epochs"
+    datasets: [cifar10]
+    methods: [fedavg, fedyogi]
+    non_iid_levels: [moderate]
+    losses: [CE]
+    seeds: [42]
+    # Vary local epochs
+    local_epoch_configs:
+      - num_epochs: 1
+        num_rounds: 500
+      - num_epochs: 5
+        num_rounds: 200
+      - num_epochs: 10
+        num_rounds: 100
+      - num_epochs: 20
+        num_rounds: 50
+  
+  # Example: Using specific pre-generated dataset with quantity+label imbalance
+  quantity_label_imbalance:
+    description: "Test with quantity + label imbalance dataset"
+    datasets: [cifar10]
+    methods: [fedavg, fedyogi, fedsat]
+    non_iid_levels: [moderate]
+    seeds: [42, 123]
+    overrides:
+      dataset_type: "qty_lbl_imb"  # main.py will append beta and num_clients
+      n_class: 2
+    method_specific_loss:
+      fedavg: CE
+      fedyogi: CE
+      fedsat: CALC
+
+#############################################
+# PAPER EXPERIMENTS
+# These are the final experiments for your paper
+#############################################
+
+paper_experiments:
+  
+  main_results:
+    description: "Main comparison table for paper"
+    datasets: [cifar10, cifar100, fmnist]
+    methods: [fedavg, fedprox, fedyogi, fedrs, fedntd, fedsat]
+    non_iid_levels: [moderate, severe]
+    seeds: [42, 123, 456]
+    # Each method with appropriate loss
+    method_specific_loss:
+      fedavg: CE
+      fedprox: CE
+      fedyogi: CE
+      fedrs: CE
+      fedntd: CE
+      fedsat: CALC
+  
+  ablation_table:
+    description: "Ablation study table for paper"
+    datasets: [cifar10, cifar100]
+    non_iid_levels: [severe]
+    seeds: [42, 123, 456]
+    configurations:
+      - {method: fedavg, loss: CE, name: "FedAvg (baseline)"}
+      - {method: fedavg, loss: CALC, name: "FedAvg + CALC"}
+      - {method: fedsat, loss: CALC, name: "FedSat (full)"}
+      - {method: fedsatc, loss: CACS, name: "FedSatC (variant)"}
+  
+  loss_comparison:
+    description: "Compare different loss functions with FedSat aggregation"
+    datasets: [cifar10, cifar100]
+    non_iid_levels: [severe]
+    seeds: [42, 123, 456]
+    # Test FedSat with different losses
+    configurations:
+      - {method: fedavg, loss: CE, name: "Baseline-CE"}
+      - {method: fedsat, loss: CE, name: "FedSat-CE"}
+      - {method: fedsat, loss: FL, name: "FedSat-FL"}
+      - {method: fedsat, loss: CB, name: "FedSat-CB"}
+      - {method: fedsat, loss: CALC, name: "FedSat-CALC"}
+      - {method: fedsat, loss: CACS, name: "FedSat-CACS"}
+  
+  non_iid_robustness:
+    description: "Performance across different non-IID levels"
+    datasets: [cifar10]
+    methods: [fedavg, fedyogi, fedsat]
+    non_iid_levels: [iid, mild, moderate, severe, extreme]
+    seeds: [42, 123, 456]
+    # Each method with appropriate loss
+    method_specific_loss:
+      fedavg: CE
+      fedyogi: CE
+      fedsat: CALC
+    seeds: [42, 123, 456]
+    method_specific_loss:
+      fedsat: CALC

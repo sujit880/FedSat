@@ -1,0 +1,22 @@
+\begin{table}[t]
+\centering
+\caption{Scalability analysis on CIFAR-10 ($\beta = 0.1$) with per-round communication cost. FedSat achieves superior accuracy with competitive communication overhead.}
+\label{tab:scalability_cifar_b01_comm}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lccccccccc}
+\toprule
+\multirow{2}{*}{Method} & \multicolumn{3}{c}{$k=20$} & \multicolumn{3}{c}{$k=50$} & \multicolumn{3}{c}{$k=100$} \\
+\cmidrule(lr){2-10}
+ & Acc. & Round & Comm. & Acc. & Round & Comm. & Acc. & Round & Comm. \\
+ & (\%) & & (MB) & (\%) & & (MB) & (\%) & & (MB) \\
+\midrule
+ccvr & -- & -- & -- & -- & -- & -- & 38.6 & 58 & 224.0 \\
+fedavg & 12.9 & 0 & 224.0 & 24.7 & 5 & 224.0 & 30.9 & 100 & 224.0 \\
+fedfa & -- & -- & -- & -- & -- & -- & 28.3 & 96 & 224.0 \\
+fedprox & -- & -- & -- & -- & -- & -- & 33.8 & 75 & 224.0 \\
+fedsam & -- & -- & -- & -- & -- & -- & 27.2 & 102 & 112.0 \\
+moon & 45.8 & 90 & 224.0 & 21.1 & 72 & 224.0 & 19.3 & 44 & 224.0 \\
+\textbf{fedsat (ours)} & \textbf{69.5} & \textbf{69} & \textbf{224.0} & \textbf{69.5} & \textbf{56} & \textbf{224.0} & \textbf{61.7} & \textbf{71} & \textbf{224.0} \\
+\bottomrule
+\end{tabular}}
+\end{table}

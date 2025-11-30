@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering
+\caption{Scalability analysis on CIFAR-10 ($\beta = 0.3$) with per-round communication cost. FedSat maintains superior accuracy with competitive communication overhead in large-scale federated networks.}
+\label{tab:scalability_cifar_b03_comm}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lccccccccc}
+\toprule
+\multirow{2}{*}{Method} & \multicolumn{3}{c}{$k=20$} & \multicolumn{3}{c}{$k=50$} & \multicolumn{3}{c}{$k=100$} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+ & Acc. & Round & Comm. & Acc. & Round & Comm. & Acc. & Round & Comm. \\
+ & (\%) & & (MB) & (\%) & & (MB) & (\%) & & (MB) \\
+\midrule
+ccvr & -- & -- & -- & -- & -- & -- & 67.3 & 64 & 1120.0 \\
+ditto & -- & -- & -- & -- & -- & -- & 40.7 & 99 & 1680.0 \\
+fedavg & 77.1 & 56 & 224.0 & 71.8 & 33 & 560.0 & 57.9 & 64 & 1120.0 \\
+fedfa & 78.6 & 21 & 224.0 & 70.9 & 58 & 560.0 & 63.5 & 95 & 1120.0 \\
+fedprox & 78.4 & 34 & 224.0 & 72.0 & 32 & 560.0 & 64.8 & 68 & 1120.0 \\
+fedsam & 70.6 & 89 & 224.0 & 61.7 & 97 & 560.0 & 54.1 & 99 & 1120.0 \\
+moon & 59.7 & 96 & 224.0 & 46.1 & 99 & 560.0 & 35.8 & 99 & 1120.0 \\
+\textbf{fedsat (ours)} & \textbf{79.3} & \textbf{28} & \textbf{224.0} & \textbf{76.0} & \textbf{56} & \textbf{560.0} & \textbf{74.4} & \textbf{93} & \textbf{1120.0} \\
+\bottomrule
+\end{tabular}}
+\end{table}

@@ -48,6 +48,34 @@ FEMNIST               & 0.7866 & --     & --      & --     & --    & --     & --
 \bottomrule
 \end{tabular}
 \end{table}
+ 
+	\begin{table*}[t]
+		\centering
+		\caption{Comparison across datasets and Dirichlet-$\alpha$ severities. Each alpha column is split into ACC (\%) and CR (convergence round).}
+		\label{tab:comparison_all}
+		\resizebox{\linewidth}{!}{%
+		\begin{tabular}{l*{24}{c}}
+			oprule
+		Method & \multicolumn{6}{c}{FMNIST} & \multicolumn{6}{c}{FEMNIST} & \multicolumn{6}{c}{CIFAR-10} & \multicolumn{6}{c}{CIFAR-100} \\
+		& \multicolumn{2}{c}{$\alpha{=}0.3$} & \multicolumn{2}{c}{$\alpha{=}0.1$} & \multicolumn{2}{c}{$\alpha{=}0.05$}
+		& \multicolumn{2}{c}{$\alpha{=}0.3$} & \multicolumn{2}{c}{$\alpha{=}0.1$} & \multicolumn{2}{c}{$\alpha{=}0.05$}
+		& \multicolumn{2}{c}{$\alpha{=}0.3$} & \multicolumn{2}{c}{$\alpha{=}0.1$} & \multicolumn{2}{c}{$\alpha{=}0.05$}
+		& \multicolumn{2}{c}{$\alpha{=}0.3$} & \multicolumn{2}{c}{$\alpha{=}0.1$} & \multicolumn{2}{c}{$\alpha{=}0.05$} \\
+		& ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR & ACC (\%) & CR \\
+		\midrule
+		FedAvg & 86.35 & 102 & 82.82 & 104 & \textemdash & \textemdash & 83.09 & 96 & \textemdash & \textemdash & \textemdash & \textemdash & 79.35 & 40 & 70.95 & 24 & 55.25 & 87 & 51.83 & 100 & 47.20 & 102 & 42.72 & 95 \\
+		FedProx & 82.51 & 83 & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 71.82 & 73 & \textemdash & \textemdash & 16.11 & 99 & \textemdash & \textemdash & \textemdash & \textemdash & 37.23 & 100 \\
+		SCAFFOLD & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 75.23 & 49 & 58.86 & 49 & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 31.27 & 97 \\
+		MOON & \textemdash & \textemdash & 70.94 & 104 & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 46.06 & 99 & 45.83 & 90 & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 24.28 & 83 \\
+		Ditto & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash \\
+		CCVR & 83.63 & 103 & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 36.41 & 102 \\
+		FedPVR & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 33.29 & 75 & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash \\
+		FedSAM & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 54.13 & 99 & 27.25 & 102 & 14.66 & 77 & 46.98 & 104 & 38.67 & 101 & 32.15 & 82 \\
+		FedFA & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & 78.63 & 21 & \textemdash & \textemdash & \textemdash & \textemdash & 49.27 & 104 & 37.78 & 101 & \textemdash & \textemdash \\
+		FedSat (ours) & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash & \textemdash \\
+		\bottomrule
+		\end{tabular}}
+	\end{table*}
 
 \subsection*{Claims validation}
 	extbf{C1: CACS improves robustness under label skew.} On CIFAR-10 and FMNIST, CACS delivers sizable gains over CE (+9.57 and +3.78 points, respectively), confirming that client-side confusion calibration reduces asymmetric errors.

@@ -13,9 +13,14 @@ class SCAFFOLDClient(BaseClient):
         c_local: OrderedDict[str, torch.Tensor],
         **kwargs,
     ) -> None:
-        self.c_local: OrderedDict[str, torch.Tensor] = c_local
-        for val in self.c_local.values():
-            val.requires_grad = False
+        # Ensure c_local is copied to the client's device and ordered
+        # to match model.named_parameters(). This avoids device / ordering
+        # mismatches when applying control-variate corrections.
+        self.c_local: OrderedDict[str, torch.Tensor] = OrderedDict()
+        for k, v in c_local.items():
+            # clone to avoid accidental shared storage and move to client device
+            self.c_local[k] = v.clone().to(self.device)
+            self.c_local[k].requires_grad = False
 
 
     def solve_inner(self, num_epochs=1, batch_size=10):
@@ -62,6 +67,21 @@ class SCAFFOLDClient(BaseClient):
         bytes_w = graph_size(self.model)
         train_sample_size = 0
         self.model.load_state_dict(global_parameters, strict=False)
+        # Precompute coef = 1/(K * eta) where K is total local steps (num_epochs * batches_per_epoch)
+        # We compute it here once (static for this local solve) to avoid recomputing inside loops.
+        try:
+            batches_per_epoch = len(self.trainloader)
+            if batches_per_epoch <= 0:
+                batches_per_epoch = 1
+        except Exception:
+            batches_per_epoch = 1
+        try:
+            lr_val = float(self.optimizer.param_groups[0]["lr"])
+        except Exception:
+            lr_val = float(self.lr) if hasattr(self, "lr") else float(getattr(self, "learning_rate", 1e-3))
+        tau = max(1, int(num_epochs) * int(batches_per_epoch))
+        coef = 1.0 / (tau * lr_val)
+
         self.model.train()
         for epoch in range(num_epochs): 
             for inputs, labels in self.trainloader:
@@ -72,10 +92,23 @@ class SCAFFOLDClient(BaseClient):
                 outputs = self.model(inputs)
                 loss = self.criterion(outputs, labels)
                 loss.backward()
-                for param, G, c_i in zip(
-                    self.model.parameters(), c_global.values(), self.c_local.values()
-                ):
-                    param.grad.data += (G - c_i).to(self.device) if G.device !=self.device else (G - c_i)
+                # Apply control-variate correction to all trainable parameters.
+                # Ensure G and c_i are aligned to the parameter device/dtype.
+                for (name, param) in self.model.named_parameters():
+                    if param.grad is None:
+                        continue
+                    # get server and client controls by name to avoid ordering issues
+                    G = c_global[name]
+                    c_i = self.c_local[name]
+                    # move controls to the parameter grad device if needed
+                    if G.device != param.grad.device:
+                        G = G.to(param.grad.device)
+                    if c_i.device != param.grad.device:
+                        c_i = c_i.to(param.grad.device)
+                    # Paper: add (c_i - c) to the local gradient (client minus server).
+                    # Previously this used (G - c_i) which is server - client and can push
+                    # updates in the opposite direction causing divergence / NaNs.-> it also doing same as above
+                    param.grad.data.add_(G - c_i)
                 self.optimizer.step()
                 train_sample_size += len(labels)
 
@@ -85,18 +118,23 @@ class SCAFFOLDClient(BaseClient):
             c_delta = OrderedDict()   
             c_plus = OrderedDict()
             # compute y_delta (difference of model before and after training)
-            for k,v in self.model.named_parameters():
-                y_i = v.data
-                x_i = global_parameters[k].data
+            for k, v in self.model.named_parameters():
+                y_i = v.data.clone()
+                x_i = global_parameters[k].data.clone()
                 y_delta[k] = y_i - x_i
-            
-            # compute c_plus
-            # coef = 1/num_epochs * self.lr
-            coef = 1/num_epochs * self.lr
-            for k, G, c_l, y_del in zip(
-                c_global.keys(), c_global.values(), self.c_local.values(), y_delta.values()
-            ):
-                c_plus[k]= c_l - G - coef * (y_del if y_del.device == G.device else y_del.to(G.device))
+
+            # coef was precomputed before local training loop
+
+            # compute c_plus using explicit key-based lookup to preserve ordering
+            for k in self.c_local.keys():
+                G = c_global[k]
+                c_l = self.c_local[k]
+                y_del = y_delta[k]
+                # move tensors to a common device (use G device as target)
+                if y_del.device != G.device:
+                    y_del = y_del.to(G.device)
+                # SCAFFOLD paper: c_plus = c_l - G + (1/(tau*eta)) * y_delta
+                c_plus[k] = c_l - G + coef * (-y_del) # y_del = y_i - x; -y_del = x - y_i to match paper formula
 
             # compute c_delta
             for k, c_p, c_l in zip(c_plus.keys(), c_plus.values(), self.c_local.values()):

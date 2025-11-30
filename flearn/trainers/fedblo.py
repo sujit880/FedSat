@@ -19,7 +19,7 @@ class FedBLOServer(BaseServer):
         BLO_ARGS['lamda'] = 0.5
         BLO_ARGS['lamdav'] = 1.0
         BLO_ARGS['con_tau'] = 0.5        
-        BLO_ARGS['con_mu'] = 2.0 
+        BLO_ARGS['con_mu'] = 0.1 
         BLO_ARGS['sprox_mu'] = 0.1
         BLO_ARGS['max_rl_steps'] = 100   
         params.update(BLO_ARGS)
@@ -119,7 +119,7 @@ class FedBLOServer(BaseServer):
             # Aggregate global model parameters from client solutions
             if self.ddpg_aggregation:
                 self.round = round_idx
-                self.global_params_dict = self.ddpg_aggregate(client_solutions_dict)
+                self.global_params_dict = self.drl_aggregate(client_solutions_dict)
                 print(f"Last accuracy: {self.last_acc}")
                 # If RL aggregator exposes per-client weights, store them for next round
                 if hasattr(self, 'rl_client_weights') and isinstance(self.rl_client_weights, dict):
@@ -150,3 +150,5 @@ class FedBLOServer(BaseServer):
         averaged_soln = [v / max(total_weight, 1e-8) for v in base]
         averaged_state_dict = OrderedDict(zip(model_state_dict.keys(), averaged_soln))
         return averaged_state_dict
+    
+    

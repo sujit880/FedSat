@@ -34,6 +34,7 @@ from flearn.data.dataset import CLASSES
 from flearn.utils.trainer_utils import normalize_dict
 from flearn.utils.file_writer import FileWriter
 from flearn.clients.client import BaseClient
+from flearn.models.sac_aggregator import SACAgentR
 
 
 class BaseServer(object):
@@ -43,6 +44,8 @@ class BaseServer(object):
             setattr(self, key, val)
         self.get_representative_subset = get_representative_subset
         self.count = 0
+        if not hasattr(self, "reward_case"):
+            self.reward_case = "acc_align"
         # Create worker nodes
         torch.manual_seed(self.seed)
         print(f"setting client_model")
@@ -282,6 +285,33 @@ class BaseServer(object):
         self.accuracy_clients = {}
         self.desc = f"Algo: {self.trainer}, M-{self.model}, D-{self.dataset}, N-{self.n_class}, T-{self.dataset_type}, LR-{self.learning_rate}, E-{self.num_epochs}, L-{self.loss}, B-{self.batch_size}, C-{self.clients_per_round}, G-{self.device}, Test-{self.testing_mode}"
 
+        if self.num_rounds%100==4 or self.num_rounds%100==5: 
+            if self.trainer == "fedblo" or self.agg == "drl":
+                self.ddpg_aggregation = True
+                self.num_classes = CLASSES[self.dataset]
+                self.criterion = get_loss_fun("CE")()
+                self.test_subset, _ = get_representative_subset(test_loader=self.test_loader, num_samples=1024)
+                if self.use_prev_global_model:
+                    input_channels = self.clients_per_round + 2  # Clients + prev global + current global model
+                    num_clients_per_round=self.clients_per_round + 1 , #+1 for prev global params
+                    action_dim=self.clients_per_round +1  #+1 for prev global params
+                else:
+                    input_channels = self.clients_per_round + 1  # Clients + current global model
+                    num_clients_per_round=self.clients_per_round
+                    action_dim=self.clients_per_round
+                self.rl_agent = SACAgentR(
+                                        eval_fn=self.test_model_params, 
+                                        build_class_prototypes=self.build_class_prototypes,
+                                        num_classes=self.num_classes, 
+                                        device=self.device,
+                                        num_clients_per_round=num_clients_per_round,
+                                        input_channels=input_channels,
+                                        input_dim=self.num_classes * self.num_classes,  # Size of each evaluation matrix    
+                                        action_dim=action_dim,
+                                        reward_case=self.reward_case,
+                                    )
+                # print("action dim:", self.rl_agent.action_dim)
+
         if self.agg is not None:
             self.ae = f""
             if self.agg == "fedsat" or self.agg == "fedsatc" or self.agg == "prawgs" or self.agg == "prawgcs":
@@ -314,17 +344,68 @@ class BaseServer(object):
                 self.ae += f"(slr_{s_lr}_sm_{s_m})" # default server_momentum = 0.9, default server_learning_rate = 1.0
             if self.agg == "elastic":
                 self.ae += f"(v2_mu_0_95_tau_0_5)" # default elastic_momentum = 0.95, default tau = 0.5
+            if self.agg == "drl":
+                safe_reward_case = str(getattr(self, "reward_case", "acc_align")).replace(" ", "_").replace("-", "_")
+                self.ae += f"(rw_{safe_reward_case})"
 
-            agg_extension = f"_A_{self.agg}{self.ae}"
+            agg_extension = f"_A_{self.agg}{self.ae}"            
+            if self.use_prev_global_model:
+                agg_extension = f"_A_{self.agg}_pg{self.ae}"   
             print(f"agg_extension: {agg_extension}")
             self.experiment_name = self.experiment_name + agg_extension
             self.experiment_short_name = self.experiment_short_name + agg_extension
             self.desc = self.desc + f", Agg-{self.agg}"
 
+        if self.trainer == "fedadam" or self.trainer == "fedyogi":
+            a = str(self.server_learning_rate).split(".")
+            if len(a)>1:
+                s_lr = f"{a[0]}_{a[1]}"
+            else: s_lr = f"{a[0]}"
+            self.ae = f"(slr_{s_lr})"
+            agg_extension = f"{self.ae}"
+            print(f"agg_extension: {agg_extension}")
+            self.experiment_name = self.experiment_name + agg_extension
+            self.experiment_short_name = self.experiment_short_name + agg_extension
+            self.desc = self.desc + f"{self.ae}"
+
         if self.trainer == "floco":
             self.experiment_name = self.experiment_name + f"_tau_{self.tau}"
             self.experiment_short_name = self.experiment_short_name + f"_tau_{self.tau}"
             self.desc = self.desc + f", Tau-{self.tau}"
+
+        if self.trainer == "fedmrl":
+            suffix_parts = []
+            desc_bits = []
+
+            if hasattr(self, "tau") and self.tau is not None:
+                tau_str = str(self.tau).replace('.', '_')
+                suffix_parts.append(f"tau_{tau_str}")
+                # desc_bits.append(f"Tau-{self.tau}")
+
+            if hasattr(self, "mu") and self.mu is not None:
+                mu_str = str(self.mu).replace('.', '_')
+                suffix_parts.append(f"mu_{mu_str}")
+                # desc_bits.append(f"Mu-{self.mu}")
+
+            adv_gain = getattr(self, "adv_gain", None)
+            if adv_gain is not None:
+                adv_str = str(adv_gain).replace('.', '_')
+                suffix_parts.append(f"adv_{adv_str}")
+                # desc_bits.append(f"AdvGain-{adv_gain}")
+
+            if hasattr(self, "version") and self.version is not None:
+                suffix_parts.append(f"{self.version}")
+                desc_bits.append(f"Version-{self.version}")
+            if hasattr(self, "max_rl_steps") and self.max_rl_steps is not None:
+                suffix_parts.append(f"steps_{self.max_rl_steps}")
+                # desc_bits.append(f"MaxRLSteps-{self.max_rl_steps}")
+
+            if suffix_parts:
+                suffix = "_".join(suffix_parts)
+                self.experiment_name = f"{self.experiment_name}_{suffix}"
+                self.experiment_short_name = f"{self.experiment_short_name}_{suffix}"
+            if desc_bits:
+                self.desc = self.desc + ", " + ", ".join(desc_bits)
 
         if self.trainer == "moon":
             extension = f"(mu_{str(self.mu).replace('.', '_')}_tau_{str(self.tau).replace('.', '_')}_{self.prev_model_version})"
@@ -360,7 +441,92 @@ class BaseServer(object):
 
         if not hasattr(self, "metadata"):
             self.metadata = {}
-        self.metadata["testing_mode"] = self.testing_mode 
+        # Basic test mode
+        self.metadata["testing_mode"] = self.testing_mode
+
+        # Enrich metadata with reproducible run settings and provenance
+        try:
+            # Basic identifiers
+            self.metadata.setdefault("experiment_short_name", self.experiment_short_name)
+            self.metadata.setdefault("experiment_name", self.experiment_name)
+            self.metadata.setdefault("description", self.desc)
+
+            # Device and seed
+            self.metadata.setdefault("device", {})
+            self.metadata["device"].setdefault("device_str", str(self.device))
+            self.metadata["device"].setdefault("cuda_index", getattr(self, "cuda", None))
+            self.metadata.setdefault("seed", getattr(self, "seed", None))
+
+            # Optimizer / hyperparameters
+            self.metadata.setdefault("optimizer", {})
+            self.metadata["optimizer"].setdefault("name", getattr(self, "optm", None) or "SGD")
+            self.metadata["optimizer"].setdefault("learning_rate", getattr(self, "learning_rate", None))
+            self.metadata["optimizer"].setdefault("momentum", getattr(self, "momentum", None))
+            self.metadata["optimizer"].setdefault("weight_decay", getattr(self, "weight_decay", None))
+
+            # Core experiment config
+            self.metadata.setdefault("core", {})
+            self.metadata["core"].setdefault("batch_size", getattr(self, "batch_size", None))
+            self.metadata["core"].setdefault("client_epochs", getattr(self, "num_epochs", None))
+            self.metadata["core"].setdefault("server_rounds", getattr(self, "num_rounds", None))
+            self.metadata["core"].setdefault("num_clients", num_clients)
+            self.metadata["core"].setdefault("clients_per_round", getattr(self, "clients_per_round", None))
+
+            # Aggregation/server-specific params
+            if hasattr(self, "agg") and self.agg is not None:
+                self.metadata.setdefault("aggregation", {})
+                self.metadata["aggregation"].setdefault("name", self.agg)
+                # common agg-specific params
+                if hasattr(self, "top_p"):
+                    self.metadata["aggregation"].setdefault("top_p", getattr(self, "top_p"))
+                if hasattr(self, "server_learning_rate"):
+                    self.metadata["aggregation"].setdefault("server_learning_rate", getattr(self, "server_learning_rate"))
+                if hasattr(self, "server_momentum"):
+                    self.metadata["aggregation"].setdefault("server_momentum", getattr(self, "server_momentum"))
+
+            # Loss-specific parameters (try to inspect client criterion)
+            try:
+                client0 = self.clients[0]
+                crit = getattr(client0, "criterion", None)
+                if crit is not None:
+                    loss_params = {}
+                    # common candidate attrs
+                    candidates = [
+                        "prior_beta",
+                        "conf_beta",
+                        "lmu",
+                        "cmu",
+                        "ema_m",
+                        "tau",
+                        "rho",
+                        "alpha",
+                        "m0",
+                        "p0",
+                        "c0",
+                    ]
+                    for a in candidates:
+                        if hasattr(crit, a):
+                            try:
+                                loss_params[a] = getattr(crit, a)
+                            except Exception:
+                                loss_params[a] = str(getattr(crit, a))
+                    if len(loss_params) > 0:
+                        self.metadata.setdefault("loss_params", {})
+                        self.metadata["loss_params"].update(loss_params)
+            except Exception:
+                pass
+
+            # provenance
+            try:
+                self.metadata.setdefault("provenance", {})
+                self.metadata["provenance"].setdefault("generated_at", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+                self.metadata["provenance"].setdefault("generated_by", "BaseServer:FileWriter")
+                self.metadata["provenance"].setdefault("results_path", getattr(self.filewriter, "path", None) if hasattr(self, "filewriter") else None)
+            except Exception:
+                pass
+        except Exception:
+            # Fallback: leave metadata as-is if enrichment fails
+            pass
         self.filewriter = FileWriter(
             dataset_name=self.dataset,
             # dataset_type=self.dataset_type,
@@ -423,9 +589,31 @@ class BaseServer(object):
             clients_stats = clients_stats[0 : self.num_clients]
 
         # load corresponding client
-        client_module_path = f"flearn.clients.{self.trainer}"
-        mod = importlib.import_module(client_module_path)
-        ClientClass: BaseClient = getattr(mod, TRAINERS[self.trainer]["client"])
+        client_class_name = TRAINERS[self.trainer]["client"]
+        # Try trainer-specific client module first (flearn.clients.<trainer>),
+        # then fall back to deriving module name from client class (FedAvgClient->fedavg).
+        ClientClass: type[BaseClient] = None
+        tried_paths = []
+        # First attempt: module named after trainer (preferred when trainer has its own client implementation)
+        trainer_module_path = f"flearn.clients.{self.trainer}"
+        try:
+            tried_paths.append(trainer_module_path)
+            mod = importlib.import_module(trainer_module_path)
+            if hasattr(mod, client_class_name):
+                ClientClass = getattr(mod, client_class_name)
+        except Exception:
+            ClientClass = None
+
+        if ClientClass is None:
+            # Fallback: derive module name from client class name (e.g., FedAvgClient -> fedavg)
+            client_module_name = client_class_name.replace("Client", "").lower()
+            client_module_path = f"flearn.clients.{client_module_name}"
+            tried_paths.append(client_module_path)
+            try:
+                mod = importlib.import_module(client_module_path)
+                ClientClass = getattr(mod, client_class_name)
+            except Exception as e:
+                raise ImportError(f"Could not import client class {client_class_name} from tried paths {tried_paths}: {e}")
 
         all_clients = [
             ClientClass(
@@ -1002,3 +1190,82 @@ class BaseServer(object):
                     save_dir, f"Global_test_round{round}.pdf"
                 ),
             )
+
+    def drl_aggregate(self, clients_params_dict):
+        """
+        SAC-compatible aggregation loop (works with your existing env + replay buffer).
+        - Uses self.rl_agent.get_action(state) for stochastic data collection (Concrete policy).
+        - Calls self.rl_agent.update(batch_size=32) on a cadence (every 2 steps by default).
+        """
+        if not hasattr(self, "max_rl_steps"):
+            self.max_rl_steps = 100
+
+        # Reset SAC env with the clients' models -> initial state
+        state, done = self.rl_agent.reset(parameters_vectors_dict=clients_params_dict)
+
+        steps = 0
+        rewards = []
+        dones = []
+        start_time = time.time()
+
+        # IMPORTANT: add parentheses to preserve the intended logic
+        while (not done and steps < self.max_rl_steps):
+            steps += 1
+
+            # Ensure state has a batch dimension: expected (B, C, L)
+            if state.dim() == 1:
+                state = state.unsqueeze(0)
+
+            # Sample a simplex action from the SAC policy (Gumbel-Softmax)
+            action = self.rl_agent.get_action(state)  # shape [K], already on simplex
+
+            # Step the FL environment with this aggregation weight vector
+            next_state, reward, done = self.rl_agent.step(action)
+
+            # Ensure next_state has a batch dimension too
+            if next_state.dim() == 1:
+                next_state = next_state.unsqueeze(0)
+
+            # --- Experience storage / update ---
+            if not (self.num_rounds % 100 == 4):  # keep your PPO special-case
+                # Push to buffer (SAC uses off-policy replay)
+                self.rl_agent.replay_buffer.push(state, action.detach(), reward, next_state, done)
+
+                # Update critics/actor/alpha periodically
+                if steps % 2 == 0:
+                    self.rl_agent.update(batch_size=32)
+            else:
+                rewards.append(reward)
+                dones.append(done)
+
+            state = next_state
+
+        end_time = time.time()
+        elapsed_time_ms = (end_time - start_time) * 1000.0
+
+        # Stats and logging
+        diff = self.rl_agent.env.best_accuracy - self.rl_agent.env.global_accuracy
+        denom = (self.rl_agent.env.global_accuracy if self.rl_agent.env.global_accuracy and self.rl_agent.env.global_accuracy != 0 else 1e-8)
+        improvement_percentage = (diff / denom) * 100.0
+
+        # print(
+        #     f"Global Model Accuracy after round {self.round+1}: "
+        #     f"{self.rl_agent.env.global_accuracy:.2f}%, Steps: {steps}, "
+        #     f"diff: {self.rl_agent.env.highest_accuracy - self.rl_agent.env.best_accuracy:.4f}"
+        # )
+
+        self.filewriter.writerow(
+            filename=RLAGG_STATS_FILE_NAME,
+            row=[self.round, steps, self.rl_agent.env.global_accuracy, self.rl_agent.env.best_accuracy,
+                diff, improvement_percentage, elapsed_time_ms],
+        )
+
+        self.rl_client_weights = deepcopy(self.rl_agent.env.weights_vector)
+        # Return best or current globals as before
+        if self.rl_agent.env.new_best:
+            self.last_acc = self.rl_agent.env.best_accuracy
+            return self.rl_agent.env.best_params
+        else:
+            self.last_acc = self.rl_agent.env.global_accuracy
+            return self.rl_agent.env.global_parameters
+
