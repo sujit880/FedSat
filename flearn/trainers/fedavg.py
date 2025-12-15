@@ -48,7 +48,7 @@ class FedAvgServer(BaseServer):
             client.num_classes = self.num_classes
 
         # choose aggregation method
-        if self.agg is not None and not self.agg=="drl":
+        if self.agg is not None and self.agg not in {"drl", "prl", "mdrl"}:
             self.aggregator = Aggregator(method=self.agg, model=self.client_model, lr=self.server_learning_rate, mu=self.server_momentum, top_p=self.top_p)
         # Check and print overall dataset stats (train + val) across all clients
         if hasattr(self, "clients") and self.clients:
@@ -107,6 +107,7 @@ class FedAvgServer(BaseServer):
 
             csolns = []  # buffer for receiving client solutions
             client_solutions_dict = {}
+            client_metadata_dict = {}
 
             for _, c in enumerate(selected_clients):  # simply drop the slow devices
                 # communicate the latest model
@@ -132,21 +133,40 @@ class FedAvgServer(BaseServer):
                     csolns.append((soln[0], (soln[1], struggling_score)))  # (weight, (soln[1], struggling_score))
                 elif self.agg == "drl": 
                     client_solutions_dict[c.id] = soln[1]
+                elif self.agg == "prl":
+                    client_solutions_dict[c.id] = soln[1]
+                    client_metadata_dict[c.id] = self._build_prl_client_metadata(
+                        client=c,
+                        num_samples=soln[0]
+                    )
+                elif self.agg == "mdrl":
+                    client_solutions_dict[c.id] = soln[1]
+                    csolns.append(soln)
                 else:
                     csolns.append(soln)
             # update models
-            if self.agg is not None and not self.agg=="drl":
+            if self.agg == "mdrl":
+                self.round = i
+                self.latest_model = self.mdrl_aggregate(csolns, client_solutions_dict)
+            elif self.agg is not None and self.agg not in {"drl", "prl"}:
                 self.latest_model = self.aggregator.aggregate(csolns, self.latest_model)
-            if self.agg=="drl":
+            elif self.agg in {"drl", "prl"}:
                 self.round = i
                 if self.use_prev_global_model:
                     client_solutions_dict[len(self.clients)+1] = deepcopy(self.latest_model)
-                self.latest_model = self.drl_aggregate(client_solutions_dict)
+                if self.agg == "prl":
+                    self.latest_model = self.prl_aggregate(
+                        client_solutions_dict,
+                        client_metadata=client_metadata_dict
+                    )
+                else:
+                    self.latest_model = self.drl_aggregate(client_solutions_dict)
                 # print(f"Last accuracy: {self.last_acc}")
                 # If RL aggregator exposes per-client weights, store them for next round
                 if hasattr(self, 'rl_client_weights') and isinstance(self.rl_client_weights, dict):
                     self.last_client_weights = {k: float(v) for k, v in self.rl_client_weights.items()}
-            else:   self.latest_model = self.aggregate(csolns)
+            else:
+                self.latest_model = self.aggregate(csolns)
             self.client_model.load_state_dict(self.latest_model, strict=False)
 
         self.eval_end()
@@ -171,3 +191,23 @@ class FedAvgServer(BaseServer):
         averaged_state_dict = OrderedDict(zip(model_state_dict.keys(), averaged_soln))
 
         return averaged_state_dict
+
+    def _build_prl_client_metadata(self, client: FedAvgClient, num_samples: int) -> dict:
+        """Construct metadata required by the PPO-based aggregator."""
+        struggle_score = 0.0
+        criterion = getattr(client, "criterion", None)
+        compute_scores = getattr(criterion, "compute_struggler_scores", None)
+        if callable(compute_scores):
+            try:
+                scores = compute_scores()
+                if hasattr(scores, "mean"):
+                    struggle_score = float(scores.mean().item() if hasattr(scores, "item") else scores.mean())
+                elif isinstance(scores, (list, tuple)) and len(scores) > 0:
+                    struggle_score = float(sum(scores) / len(scores))
+            except Exception:
+                struggle_score = 0.0
+
+        return {
+            "num_samples": int(num_samples),
+            "struggle_score": float(struggle_score),
+        }

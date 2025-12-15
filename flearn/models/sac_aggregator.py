@@ -127,7 +127,7 @@ class AggregationEnvn:
         
         if self.highest_accuracy < new_accuracy:
             self.highest_accuracy = new_accuracy
-        return next_state, reward, self.is_done
+        return next_state, reward, new_accuracy, self.is_done
 
     def reset(self, parameters_vectors_dict):
         self.reset_internal()
@@ -256,6 +256,9 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
 
+    def clear(self):
+        self.buffer.clear()
+
 
 # ============================== SAC Agent ==============================
 
@@ -326,7 +329,7 @@ class SACAgentR:
         self.gamma = gamma
         self.tau = tau
         self.action_dim = action_dim
-        self.replay_buffer = ReplayBuffer(3000, self.device)
+        self.replay_buffer = ReplayBuffer(500, self.device)
 
     @property
     def alpha(self):

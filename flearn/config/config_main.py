@@ -64,6 +64,7 @@ TRAINERS = {
     "eproto": {"server": "EprotoServer", "client": "EprotoClient"},
     "fedeprotogen": {"server": "FedEPGenServer", "client": "FedEPGenClient"},
     "fedcvae": {"server": "FedFLAIRServer", "client": "FedFLAIRClient"},
+    "hybrid": {"server": "HybridStrategyServer", "client": "HybridClient"},
     "fedprotocvae": {"server": "FedFLAIRServer", "client": "FedFLAIRClient"},
     "fedflair": {"server": "FedFLAIRServer", "client": "FedFLAIRClient"},
     "pfedflair": {"server": "FedFLAIRServer", "client": "FedFLAIRClient"},

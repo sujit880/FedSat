@@ -24,7 +24,7 @@ import ot
 import importlib
 import random
 from copy import deepcopy
-from typing import Callable, Any
+from typing import Callable, Any, Dict, Optional
 from flearn.utils.plotting import plot_data_dict_in_pdf, visualize_embeddings
 from flearn.utils.tools import get_optimal_cuda_device
 from flearn.data.data_utils import get_testloader
@@ -35,6 +35,12 @@ from flearn.utils.trainer_utils import normalize_dict
 from flearn.utils.file_writer import FileWriter
 from flearn.clients.client import BaseClient
 from flearn.models.sac_aggregator import SACAgentR
+from flearn.models.ppo_aggregator import (
+    PPOAgentR,
+    get_prl_state_specs,
+)
+from flearn.models.ppo_struggle_aggregator import StruggleAwarePPOAgent
+from flearn.utils.aggregator import Aggregator
 
 
 class BaseServer(object):
@@ -169,7 +175,7 @@ class BaseServer(object):
             if self.loss == "CAPA":
                 # client_ = self.clients[0]
                 # a = str(client_.criterion.prior_beta).split(".")
-                self.le += f"(P_{0}_{5}AB_{0}_{0}{"1"}_m_{0}_{"2"}K_{6}S)"
+                self.le += "(P_0_5AB_0_01_m_0_2K_6S)"
             if self.loss == "CL":
                 client_ = self.clients[0]
                 a = str(client_.criterion.tau).split(".")
@@ -284,33 +290,120 @@ class BaseServer(object):
         self.loss_global = []
         self.accuracy_clients = {}
         self.desc = f"Algo: {self.trainer}, M-{self.model}, D-{self.dataset}, N-{self.n_class}, T-{self.dataset_type}, LR-{self.learning_rate}, E-{self.num_epochs}, L-{self.loss}, B-{self.batch_size}, C-{self.clients_per_round}, G-{self.device}, Test-{self.testing_mode}"
+        # Append controller type if available (e.g., hybrid trainer chooses mlp/drl)
+        ctrl_type = getattr(self, "controller_type", None)
+        if ctrl_type:
+            self.experiment_name = f"{self.experiment_name}_ct_{ctrl_type}"
+            self.experiment_short_name = f"{self.experiment_short_name}_ct_{ctrl_type}"
+            self.desc = self.desc + f", CT-{ctrl_type}"
 
-        if self.num_rounds%100==4 or self.num_rounds%100==5: 
-            if self.trainer == "fedblo" or self.agg == "drl":
+        rl_condition = (self.num_rounds % 100 in {4, 5}) or (self.agg in {"drl", "prl", "mdrl"})
+        if rl_condition:
+            if self.trainer == "fedblo" or self.agg in {"drl", "prl", "mdrl"}:
                 self.ddpg_aggregation = True
                 self.num_classes = CLASSES[self.dataset]
                 self.criterion = get_loss_fun("CE")()
                 self.test_subset, _ = get_representative_subset(test_loader=self.test_loader, num_samples=1024)
                 if self.use_prev_global_model:
                     input_channels = self.clients_per_round + 2  # Clients + prev global + current global model
-                    num_clients_per_round=self.clients_per_round + 1 , #+1 for prev global params
-                    action_dim=self.clients_per_round +1  #+1 for prev global params
+                    num_clients_per_round = self.clients_per_round + 1  # +1 for prev global params
+                    action_dim = self.clients_per_round + 1  # +1 for prev global params
                 else:
                     input_channels = self.clients_per_round + 1  # Clients + current global model
-                    num_clients_per_round=self.clients_per_round
-                    action_dim=self.clients_per_round
-                self.rl_agent = SACAgentR(
-                                        eval_fn=self.test_model_params, 
-                                        build_class_prototypes=self.build_class_prototypes,
-                                        num_classes=self.num_classes, 
-                                        device=self.device,
-                                        num_clients_per_round=num_clients_per_round,
-                                        input_channels=input_channels,
-                                        input_dim=self.num_classes * self.num_classes,  # Size of each evaluation matrix    
-                                        action_dim=action_dim,
-                                        reward_case=self.reward_case,
-                                    )
-                # print("action dim:", self.rl_agent.action_dim)
+                    num_clients_per_round = self.clients_per_round
+                    action_dim = self.clients_per_round
+
+                if self.agg == "prl":
+                    self.prl_delta_scale = getattr(self, "prl_delta_scale", 0.5)
+                    self.prl_history_size = getattr(self, "prl_history_size", 5)
+                    self.prl_rollout_factor = getattr(self, "prl_rollout_factor", 2.5)
+                    self.prl_update_epochs = getattr(self, "prl_update_epochs", 4)
+                    self.prl_batch_size = getattr(self, "prl_batch_size", 48)
+                    self.prl_context_variant = getattr(self, "prl_context_variant", "basic")
+                    self.prl_strategy = getattr(self, "prl_strategy", "default")
+                    self.prl_adaptive_delta = getattr(self, "prl_adaptive_delta", True)
+                    self.prl_delta_scale_min = getattr(self, "prl_delta_scale_min", 0.1)
+                    self.prl_delta_scale_max = getattr(self, "prl_delta_scale_max", 0.9)
+                    self.prl_delta_scale_gain = getattr(self, "prl_delta_scale_gain", 0.05)
+                    self.prl_delta_scale_margin = getattr(self, "prl_delta_scale_margin", 0.002)
+                    self.prl_enable_safety = getattr(self, "prl_enable_safety", True)
+                    self.prl_safety_tolerance = getattr(self, "prl_safety_tolerance", 0.005)
+                    self.prl_safety_patience = getattr(self, "prl_safety_patience", 2)
+                    self.prl_safety_cooldown = getattr(self, "prl_safety_cooldown", 1)
+                    self.prl_safety_penalty = getattr(self, "prl_safety_penalty", 0.05)
+                    self.prl_struggle_blend = getattr(self, "prl_struggle_blend", 0.35)
+                    self.prl_struggle_temperature = getattr(self, "prl_struggle_temperature", 2.0)
+                    self.prl_struggle_floor = getattr(self, "prl_struggle_floor", 1e-4)
+                    state_specs = get_prl_state_specs(
+                        num_clients_per_round,
+                        self.prl_history_size,
+                        self.prl_context_variant,
+                    )
+                    state_dim = state_specs["state_dim"]
+                    agent_class = PPOAgentR
+                    agent_kwargs = dict(
+                        eval_fn=self.test_model_params,
+                        build_class_prototypes=self.build_class_prototypes,
+                        num_classes=self.num_classes,
+                        device=self.device,
+                        num_clients_per_round=num_clients_per_round,
+                        state_dim=state_dim,
+                        action_dim=action_dim,
+                        reward_case=self.reward_case,
+                        baseline_type=getattr(self, "prl_baseline_type", "mean"),
+                        use_advantage=getattr(self, "prl_use_advantage", True),
+                        kl_weight=getattr(self, "prl_kl_weight", 0.01),
+                        delta_scale=self.prl_delta_scale,
+                        adaptive_delta=self.prl_adaptive_delta,
+                        delta_scale_min=self.prl_delta_scale_min,
+                        delta_scale_max=self.prl_delta_scale_max,
+                        delta_scale_gain=self.prl_delta_scale_gain,
+                        delta_scale_margin=self.prl_delta_scale_margin,
+                        history_size=self.prl_history_size,
+                        context_variant=self.prl_context_variant,
+                        enable_safety=self.prl_enable_safety,
+                        safety_tolerance=self.prl_safety_tolerance,
+                        safety_patience=self.prl_safety_patience,
+                        safety_cooldown_rounds=self.prl_safety_cooldown,
+                        safety_penalty=self.prl_safety_penalty,
+                    )
+                    if self.prl_strategy.lower() == "struggle":
+                        agent_class = StruggleAwarePPOAgent
+                        agent_kwargs.update(
+                            struggle_blend=self.prl_struggle_blend,
+                            struggle_temperature=self.prl_struggle_temperature,
+                            struggle_floor=self.prl_struggle_floor,
+                        )
+                    self.rl_agent = agent_class(**agent_kwargs)
+                else:
+                    self.rl_agent = SACAgentR(
+                        eval_fn=self.test_model_params,
+                        build_class_prototypes=self.build_class_prototypes,
+                        num_classes=self.num_classes,
+                        device=self.device,
+                        num_clients_per_round=num_clients_per_round,
+                        input_channels=input_channels,
+                        input_dim=self.num_classes * self.num_classes,
+                        action_dim=action_dim,
+                        reward_case=self.reward_case,
+                    )
+
+        if getattr(self, "agg", None) == "mdrl":
+            self.mdrl_mean_aggregator = Aggregator(
+                method="mean",
+                model=self.client_model,
+                lr=self.server_learning_rate,
+                mu=self.server_momentum,
+                top_p=getattr(self, "top_p", 1),
+            )
+            self.mdrl_improvement_margin = float(getattr(self, "mdrl_improvement_margin", 1e-4))
+            self.mdrl_eval_batches = int(getattr(self, "mdrl_eval_batches", 1))
+            self.mdrl_rl_update_period = int(max(1, getattr(self, "mdrl_rl_update_period", 3)))
+            self.mdrl_rl_update_steps = int(max(1, getattr(self, "mdrl_rl_update_steps", 2)))
+            self.mdrl_rl_batch_size = int(getattr(self, "mdrl_rl_batch_size", 32))
+            self.mdrl_episode_counter = 0
+            if not hasattr(self, "last_acc"):
+                self.last_acc = None
 
         if self.agg is not None:
             self.ae = f""
@@ -344,7 +437,7 @@ class BaseServer(object):
                 self.ae += f"(slr_{s_lr}_sm_{s_m})" # default server_momentum = 0.9, default server_learning_rate = 1.0
             if self.agg == "elastic":
                 self.ae += f"(v2_mu_0_95_tau_0_5)" # default elastic_momentum = 0.95, default tau = 0.5
-            if self.agg == "drl":
+            if self.agg in {"drl", "prl", "mdrl"}:
                 safe_reward_case = str(getattr(self, "reward_case", "acc_align")).replace(" ", "_").replace("-", "_")
                 self.ae += f"(rw_{safe_reward_case})"
 
@@ -1191,16 +1284,85 @@ class BaseServer(object):
                 ),
             )
 
-    def drl_aggregate(self, clients_params_dict):
-        """
-        SAC-compatible aggregation loop (works with your existing env + replay buffer).
-        - Uses self.rl_agent.get_action(state) for stochastic data collection (Concrete policy).
-        - Calls self.rl_agent.update(batch_size=32) on a cadence (every 2 steps by default).
-        """
+    def mdrl_aggregate(self, client_weighted_solutions, clients_params_dict: Optional[Dict[int, dict]] = None):
+        """Mean-first aggregation with RL fallback for self.agg == 'mdrl'."""
+        if not hasattr(self, "mdrl_mean_aggregator"):
+            raise RuntimeError("MD-RL aggregation requested but components are uninitialized.")
+        if not client_weighted_solutions:
+            raise ValueError("MD-RL aggregation requires at least one client solution.")
+
+        mean_state = self.mdrl_mean_aggregator.aggregate(client_weighted_solutions, self.latest_model)
+
+        if self.test_subset is None:
+            self.test_subset, _ = get_representative_subset(test_loader=self.test_loader, num_samples=1024)
+        
+        prev_acc = getattr(self, "last_acc", None)
+        if prev_acc is None:
+            prev_acc, _ = self.test_model_params(
+                self.latest_model,
+                name="mdrl_prev",
+            )
+            self.last_acc = prev_acc
+
+        mean_acc, _ = self.test_model_params(
+            mean_state,
+            name="mdrl_mean",
+        )
+
+        margin = 0.03  # 3% minimum improvement to avoid RL fallback
+        if mean_acc >= prev_acc + margin:
+            self.last_acc = mean_acc
+            return mean_state
+
+        rl_clients = dict(clients_params_dict or {})
+        if not rl_clients:
+            rl_clients = {idx: state for idx, (_, state) in enumerate(client_weighted_solutions)}
+
+        if self.use_prev_global_model:
+            rl_clients[len(self.clients) + 1] = deepcopy(self.latest_model)
+
+        improved_state = self.drl_aggregate(rl_clients, margin=margin)
+        improved_acc, _ = self.test_model_params(
+            improved_state,
+            name="mdrl_mean",
+        )
+        self.last_acc = improved_acc
+        self._mdrl_post_episode_update()
+        return improved_state
+
+    def _mdrl_post_episode_update(self):
+        """Periodically train SAC agent after MD-RL fallback and refresh replay buffer."""
+        if not hasattr(self, "mdrl_rl_update_period") or not hasattr(self, "rl_agent"):
+            return
+
+        self.mdrl_episode_counter = getattr(self, "mdrl_episode_counter", 0) + 1
+        if self.mdrl_episode_counter % self.mdrl_rl_update_period != 0:
+            return
+
+        if hasattr(self.rl_agent, "replay_buffer"):
+            for _ in range(self.mdrl_rl_update_steps):
+                self.rl_agent.update(batch_size=self.mdrl_rl_batch_size)
+            if hasattr(self.rl_agent.replay_buffer, "clear"):
+                self.rl_agent.replay_buffer.clear()
+
+    def ddpg_aggregate(self, clients_params_dict):
+        """Backward-compatible alias that routes to the SAC-based aggregator."""
+        return self.drl_aggregate(clients_params_dict)
+
+    def drl_aggregate(self, clients_params_dict, margin: float = None):
+        """SAC-based aggregation used when self.agg == 'drl'."""
         if not hasattr(self, "max_rl_steps"):
             self.max_rl_steps = 100
 
-        # Reset SAC env with the clients' models -> initial state
+        if margin is not None:
+            self.max_rl_steps = 500
+            prev_acc = getattr(self, "last_acc", None)
+            if prev_acc is None:
+                prev_acc, _ = self.test_model_params(
+                    self.latest_model,
+                    name="mdrl_prev",
+                )
+                self.last_acc = prev_acc
         state, done = self.rl_agent.reset(parameters_vectors_dict=clients_params_dict)
 
         steps = 0
@@ -1208,31 +1370,27 @@ class BaseServer(object):
         dones = []
         start_time = time.time()
 
-        # IMPORTANT: add parentheses to preserve the intended logic
         while (not done and steps < self.max_rl_steps):
             steps += 1
 
-            # Ensure state has a batch dimension: expected (B, C, L)
             if state.dim() == 1:
                 state = state.unsqueeze(0)
 
-            # Sample a simplex action from the SAC policy (Gumbel-Softmax)
-            action = self.rl_agent.get_action(state)  # shape [K], already on simplex
+            action = self.rl_agent.get_action(state)
+            next_state, reward, new_accuracy, done = self.rl_agent.step(action)
 
-            # Step the FL environment with this aggregation weight vector
-            next_state, reward, done = self.rl_agent.step(action)
+            if margin is not None:
+                if new_accuracy >= prev_acc + margin:
+                    self.last_acc = new_accuracy
+                    return deepcopy(self.rl_agent.env.current_global_parameters)
 
-            # Ensure next_state has a batch dimension too
             if next_state.dim() == 1:
                 next_state = next_state.unsqueeze(0)
 
-            # --- Experience storage / update ---
-            if not (self.num_rounds % 100 == 4):  # keep your PPO special-case
-                # Push to buffer (SAC uses off-policy replay)
+            if not (self.num_rounds % 100 == 4):
                 self.rl_agent.replay_buffer.push(state, action.detach(), reward, next_state, done)
 
-                # Update critics/actor/alpha periodically
-                if steps % 2 == 0:
+                if steps % 20 == 0:
                     self.rl_agent.update(batch_size=32)
             else:
                 rewards.append(reward)
@@ -1264,8 +1422,86 @@ class BaseServer(object):
         # Return best or current globals as before
         if self.rl_agent.env.new_best:
             self.last_acc = self.rl_agent.env.best_accuracy
-            return self.rl_agent.env.best_params
+            return deepcopy(self.rl_agent.env.best_params)
         else:
             self.last_acc = self.rl_agent.env.global_accuracy
-            return self.rl_agent.env.global_parameters
+            return deepcopy(self.rl_agent.env.global_parameters)
+
+    def prl_aggregate(self, clients_params_dict, client_metadata: Dict[int, Dict[str, float]]):
+        """PPO-based aggregation used when self.agg == 'prl'."""
+        if client_metadata is None:
+            raise ValueError("client_metadata must be provided for prl aggregation.")
+
+        rollout_target = int(max(1, self.prl_rollout_factor * len(clients_params_dict)))
+        if not hasattr(self, "max_rl_steps"):
+            self.max_rl_steps = max(rollout_target, 100)
+        effective_max_steps = max(self.max_rl_steps, rollout_target)
+
+        self.rl_agent.buffer.clear()
+        state, done = self.rl_agent.reset(
+            parameters_dict=clients_params_dict,
+            client_metadata=client_metadata,
+        )
+
+        steps = 0
+        start_time = time.time()
+        rollout_rewards = []
+
+        while (not done and steps < effective_max_steps):
+            steps += 1
+
+            if state.dim() == 1:
+                state = state.unsqueeze(0)
+
+            action, log_prob, value = self.rl_agent.get_action(state)
+            action_batch = action.unsqueeze(0)
+            next_state, reward, new_accuracy, done = self.rl_agent.step(action)
+            rollout_rewards.append(reward)
+
+            if next_state.dim() == 1:
+                next_state = next_state.unsqueeze(0)
+
+            self.rl_agent.buffer.push(
+                state.detach(),
+                action_batch.detach(),
+                reward,
+                log_prob.detach(),
+                value.detach(),
+                done,
+            )
+
+            state = next_state
+
+        self.rl_agent.update(
+            n_epochs=self.prl_update_epochs,
+            batch_size=self.prl_batch_size,
+        )
+        end_time = time.time()
+        elapsed_time_ms = (end_time - start_time) * 1000.0
+
+        env = self.rl_agent.env
+        env.global_parameters = deepcopy(env.current_global_parameters)
+        env.global_accuracy = env.current_accuracy
+
+        diff = env.best_accuracy - env.global_accuracy
+        denom = env.global_accuracy if env.global_accuracy not in (None, 0) else 1e-8
+        improvement_percentage = (diff / denom) * 100.0
+
+        self.filewriter.writerow(
+            filename=RLAGG_STATS_FILE_NAME,
+            row=[
+                self.round,
+                steps,
+                env.global_accuracy,
+                env.best_accuracy,
+                diff,
+                improvement_percentage,
+                elapsed_time_ms,
+            ],
+        )
+
+        self.rl_client_weights = deepcopy(env.weights_vector)
+        self.last_acc = env.best_accuracy
+
+        return env.best_params
 
